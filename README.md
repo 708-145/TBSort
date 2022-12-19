@@ -1,10 +1,13 @@
 # TBSort
 ## TreeBinSort - A general O(n * log(log(n)) sort
+TB scale sorting and beyond
 
 ### Algorithm properties:
 - Stable: yes. elements with the same sort key keep their order.
 - General: yes. No information about the distribution of data is assumed.
 - In-place: no. This is a field of ongoing research.
+- Parallel: no. This is a field of ongoing research.
+- Distributed: no. This is a field of ongoing research.
 - Time complexity: O(n * log (log n))
 - Caveat: has initial overhead. Break even point is currently at around 2M elements. With further optimization this can likely be reduced.
 
