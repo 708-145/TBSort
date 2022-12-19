@@ -57,14 +57,14 @@ int search(int a[], int n, int e)
     {
         m=(l+r)/2;
         if(e==a[m])
-            return(m);	// TODO: for search_bin directly return targetbin
+            return(m);
         else
             if(e>a[m])
                 l=m+1;
             else
                 r=m-1;
     }
-    return l;	// TODO: for search_bin use targetbin, slope and offset here
+    return l;
 }
 
 // l is for left index and r is 
@@ -81,13 +81,12 @@ void TBSort(int arr[],
 		int sampleTree[treeSize];
 		for (int i = 0; i < treeSize; i++) sampleTree[i] = arr[ l + (rand() % (r - l + 1)) ]; // TODO: sample unique values
 		std::sort(sampleTree, sampleTree+treeSize);
-		printf("sampleTree: "); printArray(sampleTree, treeSize);
+		printf("Search Tree: "); printArray(sampleTree, treeSize);
 
 		// BIN step : use single pass with growable arrays (std::vector)
 		int binCount = (int) numElements / log2(numElements);
 		int targetbinSize = treeSize+2;
 		if (binCount < targetbinSize) binCount = targetbinSize;
-		//printf("treeSize : binCount = %d : %d\n", treeSize, binCount);
 		std::vector <int> bin[binCount];
 
 		int targetbin[targetbinSize];
@@ -98,36 +97,32 @@ void TBSort(int arr[],
 		targetbin[0] = 0;
 		targetbin[targetbinSize-1] = binCount-1;
 		for (int i = 1; i < targetbinSize-1; i++) {
-			slope[i] = (double) (targetbin[i+1]-targetbin[i]) / (sampleTree[i]-sampleTree[i-1]); // (bin(R)-bin(L)) / (R-L)
+			slope[i] = (double) (targetbin[i+1]-targetbin[i]) / (sampleTree[i]-sampleTree[i-1]);
 		}
 		slope [0] = slope [1];
 		slope [targetbinSize-2] = slope [targetbinSize-3];
 		for (int i = 1; i < targetbinSize-1; i++) {
-			offset[i]= (double) targetbin[i] - sampleTree[i-1] * slope[i]; // bin(L) - L * Slope[L]
+			offset[i]= (double) targetbin[i] - sampleTree[i-1] * slope[i];
 		}
-		offset[0] = targetbin[1] - sampleTree[0] / slope[0]; // special case on left hand side
+		offset[0] = targetbin[1] - sampleTree[0] / slope[0];
 
 		int mypos, mybin;
 		for (int element = 0; element < numElements; element++) {
 			mypos = search(&sampleTree[0], treeSize, arr[element]); // tree search
-			mybin = myclamp((int) (arr[element] * slope[mypos] + offset[mypos]),
-							0, binCount-1); // interpolate and clip bin = c * Slope[L] + Offset[L]
-			//printf("mypos %d in mybin %d for element %d\n", mypos, mybin, arr[element]);
+			mybin = myclamp((int) (arr[element] * slope[mypos] + offset[mypos]), 0, binCount-1);
 			bin[mybin].push_back(arr[element]);
 		}
 
 		// SORT step
-		int binThreshold = (int) 5 * numElements / binCount; // TODO: tune this
+		int binThreshold = (int) 5 * numElements / binCount;
 		int curpos = 0;
 		for (int bins = 0; bins < binCount; bins++) {
 			if (bin[bins].empty()) continue;
 			if (bin[bins].size() < binThreshold)
 				std::stable_sort(bin[bins].begin(), bin[bins].end());
 			else
-				TBSort(&bin[bins][0], 0, bin[bins].size()-1); // trick: vector is implemented as an array
-			//printf("sorted bin %d has size %zu: ", bins, bin[bins].size() );
-			//for (auto it = bin[bins].begin(); it != bin[bins].end(); it++) printf("%d ", *it); printf("\n");
-			memcpy(&arr[curpos], &bin[bins][0], bin[bins].size() * sizeof(int) ); // trick: vector is implemented as an array
+				TBSort(&bin[bins][0], 0, bin[bins].size()-1);
+			memcpy(&arr[curpos], &bin[bins][0], bin[bins].size() * sizeof(int) );
 			curpos += bin[bins].size();
 		}
     }
@@ -135,14 +130,12 @@ void TBSort(int arr[],
 
 int main()
 {
-    //int arr[] = {12, 11, 13, 5, 6, 7};
     int arr[] = {12, 11, 13, 5, 6, 7, 1, 4, 17, 3, 5, 20, 22, 2};
     int arr_size = sizeof(arr) / sizeof(arr[0]);
 
     printf("Given array is ");
     printArray(arr, arr_size);
 
-	// TODO: measure time
     TBSort(arr, 0, arr_size - 1);
   
     printf("\nTBSorted array is ");
