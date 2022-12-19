@@ -10,6 +10,7 @@ TB scale sorting and beyond
 - Distributed: no. This is a field of ongoing research.
 - Time complexity: O(n * log (log n))
 - Caveat: has initial overhead. Break even point is currently at around 2M elements. With further optimization this can likely be reduced.
+- Caveat: limited to int type currently. More types will be added.
 
 ### Algorithm idea:
 - Hybrid of interpolation sort, a type of radix sort, with a final comparison sort.
