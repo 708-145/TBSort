@@ -1,14 +1,16 @@
 # TBSort
 ## TreeBinSort - A general O(n * log(log(n)) sort
-TB scale sorting and beyond
+TB scale sorting and beyond - order of magnitude speedup over std::sort at 10^12 element scale.
+
+A blend of Sample- and Interpolationsort with an icing made of the comparison sort of choice. 
 
 ### Algorithm properties:
-- Stable: yes. elements with the same sort key keep their order.
+- Stable: yes. Elements with the same sort key keep their order.
 - General: yes. No information about the distribution of data is assumed.
 - In-place: no. This is a field of ongoing research.
 - Parallel: no. This is a field of ongoing research.
 - Distributed: no. This is a field of ongoing research.
-- Time complexity: O(n * log (log n))
+- Time complexity: O(n * log (log n)). Achieving an even better time complexity is a field of ongoing research.
 - Caveat: has initial overhead. Break even point is currently at around 2M elements. With further optimization this can likely be reduced.
 - Caveat: limited to int type currently. More types will be added.
 
