@@ -1,4 +1,5 @@
-// This file implements a sorting algorithm.
+// This file implements the TBSort algorithm.
+// gcc -o tbsort tbsort.c -lm
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,19 +12,6 @@ void swap(int* xp, int* yp) {
     int temp = *xp;
     *xp = *yp;
     *yp = temp;
-}
-
-// Function to implement bubble sort
-void bubbleSort(int arr[], int n) {
-    int i, j;
-    for (i = 0; i < n - 1; i++) {
-        // Last i elements are already in place
-        for (j = 0; j < n - i - 1; j++) {
-            if (arr[j] > arr[j + 1]) {
-                swap(&arr[j], &arr[j + 1]);
-            }
-        }
-    }
 }
 
 // Function to print an array
@@ -61,6 +49,20 @@ int search(int a[], int n, int e) {
     return ans;
 }
 
+
+// Function to implement bubble sort
+void bubbleSort(int arr[], int n) {
+    int i, j;
+    for (i = 0; i < n - 1; i++) {
+        // Last i elements are already in place
+        for (j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                swap(&arr[j], &arr[j + 1]);
+            }
+        }
+    }
+}
+
 // Function to implement insertion sort
 void insertionSort(int arr[], int n) {
     if (n <= 1) return; // Added base case for insertion sort
@@ -87,63 +89,6 @@ typedef struct {
     int capacity;
 } Bin;
 
-// TBSort function (prototype for now)
-void TBSort(int arr[], int l, int r);
-
-int main(int argc, char *argv[]) {
-  srand(time(NULL)); // Seed random number generator
-
-  // Test bubbleSort
-  int arr_bubble[] = {64, 34, 25, 12, 22, 11, 90};
-  int n_bubble = sizeof(arr_bubble) / sizeof(arr_bubble[0]);
-  printf("Array before bubble sort: \n");
-  printArray(arr_bubble, n_bubble);
-  bubbleSort(arr_bubble, n_bubble);
-  printf("\nArray after bubble sort: \n");
-  printArray(arr_bubble, n_bubble);
-  printf("\n");
-
-  // Test myclamp
-  printf("Testing myclamp:\n");
-  printf("myclamp(5, 0, 10) = %d\n", myclamp(5, 0, 10));   // Expected: 5
-  printf("myclamp(-5, 0, 10) = %d\n", myclamp(-5, 0, 10));  // Expected: 0
-  printf("myclamp(15, 0, 10) = %d\n", myclamp(15, 0, 10)); // Expected: 10
-  printf("\n");
-
-  // Test search (binary search)
-  // Note: binary search requires a sorted array. Using the already sorted arr_bubble
-  printf("Testing search (binary search on sorted array: ");
-  printArray(arr_bubble, n_bubble);
-  printf("search(arr_bubble, n_bubble, 22) = index %d (value %d)\n", search(arr_bubble, n_bubble, 22), arr_bubble[search(arr_bubble, n_bubble, 22)]); // Expected: index 2 (value 22)
-  printf("search(arr_bubble, n_bubble, 23) = index %d (value %d)\n", search(arr_bubble, n_bubble, 23), arr_bubble[search(arr_bubble, n_bubble, 23)]); // Expected: index 2 (value 22)
-  printf("search(arr_bubble, n_bubble, 10) = index %d\n", search(arr_bubble, n_bubble, 10)); // Expected: -1 (or behavior for element not found/less than smallest)
-  printf("search(arr_bubble, n_bubble, 95) = index %d (value %d)\n", search(arr_bubble, n_bubble, 95), arr_bubble[search(arr_bubble, n_bubble, 95)]); // Expected: index 6 (value 90)
-   printf("search(arr_bubble, n_bubble, 11) = index %d (value %d)\n", search(arr_bubble, n_bubble, 11), arr_bubble[search(arr_bubble, n_bubble, 11)]); // Expected: index 0 (value 11)
-  printf("\n");
-
-  // Test insertionSort
-  int arr_insertion[] = {5, 1, 4, 2, 8};
-  int n_insertion = sizeof(arr_insertion) / sizeof(arr_insertion[0]);
-  printf("Array before insertion sort: \n");
-  printArray(arr_insertion, n_insertion);
-  insertionSort(arr_insertion, n_insertion);
-  printf("\nArray after insertion sort: \n");
-  printArray(arr_insertion, n_insertion);
-  printf("\n");
-
-  // Test TBSort
-  int arr_tbsort[] = {12, 11, 13, 5, 6, 7, 1, 4, 17, 3, 5, 20, 22, 2, 100, 0, -5, 12, 5, 5, 22, -10, 30, 15};
-  int n_tbsort = sizeof(arr_tbsort) / sizeof(arr_tbsort[0]);
-  printf("Array before TBSort (new test case): \n");
-  printArray(arr_tbsort, n_tbsort);
-  TBSort(arr_tbsort, 0, n_tbsort - 1);
-  printf("\nArray after TBSort (new test case): \n");
-  printArray(arr_tbsort, n_tbsort);
-  printf("\n");
-
-
-  return 0;
-}
 
 // TBSort function implementation
 void TBSort(int arr[], int l, int r) {
@@ -376,3 +321,58 @@ void TBSort(int arr[], int l, int r) {
     free(slope);
     free(offset);
 }
+
+int main(int argc, char *argv[]) {
+  srand(time(NULL)); // Seed random number generator
+
+  // Test bubbleSort
+  int arr_bubble[] = {64, 34, 25, 12, 22, 11, 90};
+  int n_bubble = sizeof(arr_bubble) / sizeof(arr_bubble[0]);
+  printf("Array before bubble sort: \n");
+  printArray(arr_bubble, n_bubble);
+  bubbleSort(arr_bubble, n_bubble);
+  printf("\nArray after bubble sort: \n");
+  printArray(arr_bubble, n_bubble);
+  printf("\n");
+
+  // Test myclamp
+  printf("Testing myclamp:\n");
+  printf("myclamp(5, 0, 10) = %d\n", myclamp(5, 0, 10));   // Expected: 5
+  printf("myclamp(-5, 0, 10) = %d\n", myclamp(-5, 0, 10));  // Expected: 0
+  printf("myclamp(15, 0, 10) = %d\n", myclamp(15, 0, 10)); // Expected: 10
+  printf("\n");
+
+  // Test search (binary search)
+  // Note: binary search requires a sorted array. Using the already sorted arr_bubble
+  printf("Testing search (binary search on sorted array: ");
+  printArray(arr_bubble, n_bubble);
+  printf("search(arr_bubble, n_bubble, 22) = index %d (value %d)\n", search(arr_bubble, n_bubble, 22), arr_bubble[search(arr_bubble, n_bubble, 22)]); // Expected: index 2 (value 22)
+  printf("search(arr_bubble, n_bubble, 23) = index %d (value %d)\n", search(arr_bubble, n_bubble, 23), arr_bubble[search(arr_bubble, n_bubble, 23)]); // Expected: index 2 (value 22)
+  printf("search(arr_bubble, n_bubble, 10) = index %d\n", search(arr_bubble, n_bubble, 10)); // Expected: -1 (or behavior for element not found/less than smallest)
+  printf("search(arr_bubble, n_bubble, 95) = index %d (value %d)\n", search(arr_bubble, n_bubble, 95), arr_bubble[search(arr_bubble, n_bubble, 95)]); // Expected: index 6 (value 90)
+   printf("search(arr_bubble, n_bubble, 11) = index %d (value %d)\n", search(arr_bubble, n_bubble, 11), arr_bubble[search(arr_bubble, n_bubble, 11)]); // Expected: index 0 (value 11)
+  printf("\n");
+
+  // Test insertionSort
+  int arr_insertion[] = {5, 1, 4, 2, 8};
+  int n_insertion = sizeof(arr_insertion) / sizeof(arr_insertion[0]);
+  printf("Array before insertion sort: \n");
+  printArray(arr_insertion, n_insertion);
+  insertionSort(arr_insertion, n_insertion);
+  printf("\nArray after insertion sort: \n");
+  printArray(arr_insertion, n_insertion);
+  printf("\n");
+
+  // Test TBSort
+  int arr_tbsort[] = {12, 11, 13, 5, 6, 7, 1, 4, 17, 3, 5, 20, 22, 2, 100, 0, -5, 12, 5, 5, 22, -10, 30, 15};
+  int n_tbsort = sizeof(arr_tbsort) / sizeof(arr_tbsort[0]);
+  printf("Array before TBSort (new test case): \n");
+  printArray(arr_tbsort, n_tbsort);
+  TBSort(arr_tbsort, 0, n_tbsort - 1);
+  printf("\nArray after TBSort (new test case): \n");
+  printArray(arr_tbsort, n_tbsort);
+  printf("\n");
+
+  return 0;
+}
+
