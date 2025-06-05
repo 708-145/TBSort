@@ -33,6 +33,16 @@ int myclamp(int n, int lower, int upper) {
 // Function to perform binary search for element e in array a of size n
 // Returns the position of the element in the array that is <= e
 // Assumes the array is sorted
+
+// Comparison function for qsort
+int compare_integers(const void* a, const void* b) {
+    int int_a = *((const int*)a);
+    int int_b = *((const int*)b);
+    if (int_a < int_b) return -1;
+    if (int_a > int_b) return 1;
+    return 0;
+}
+
 int search(int a[], int n, int e) {
     int low = 0, high = n - 1;
     int ans = -1;
@@ -49,19 +59,6 @@ int search(int a[], int n, int e) {
     return ans;
 }
 
-
-// Function to implement bubble sort
-void bubbleSort(int arr[], int n) {
-    int i, j;
-    for (i = 0; i < n - 1; i++) {
-        // Last i elements are already in place
-        for (j = 0; j < n - i - 1; j++) {
-            if (arr[j] > arr[j + 1]) {
-                swap(&arr[j], &arr[j + 1]);
-            }
-        }
-    }
-}
 
 // Function to implement insertion sort
 void insertionSort(int arr[], int n) {
@@ -325,13 +322,13 @@ void TBSort(int arr[], int l, int r) {
 int main(int argc, char *argv[]) {
   srand(time(NULL)); // Seed random number generator
 
-  // Test bubbleSort
+  // Test qsort
   int arr_bubble[] = {64, 34, 25, 12, 22, 11, 90};
   int n_bubble = sizeof(arr_bubble) / sizeof(arr_bubble[0]);
-  printf("Array before bubble sort: \n");
+  printf("Array before qsort: \n");
   printArray(arr_bubble, n_bubble);
-  bubbleSort(arr_bubble, n_bubble);
-  printf("\nArray after bubble sort: \n");
+  qsort(arr_bubble, n_bubble, sizeof(int), compare_integers);
+  printf("\nArray after qsort: \n");
   printArray(arr_bubble, n_bubble);
   printf("\n");
 
