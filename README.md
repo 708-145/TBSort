@@ -25,3 +25,5 @@ A blend of Sample- and Interpolationsort with an icing made of the comparison so
 - Bin: for each input element the closest left and right element is searched in the search tree. This requires O(n * log (log(n))) comparisons since the search tree contains log n elements. The distance to each side is used to determine the target bin for each element.
 - Sort: each target bin is sorted using a comparison sort. The average size of each bin is log n elements. Sorting all bins requires O(n * log (log(n))) comparisons since each of the n/log n bins needs O(log n * log (log(n))) comparisons to sort. If a bin happens to be much larger than expected the algorithm is called recursively and a new search tree is sampled for this bin.
 
+### License
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.

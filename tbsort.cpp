@@ -1,13 +1,9 @@
-/*****************************************************************************
- * C++ version of Tree Bin Sort 
- *****************************************************************************
- * Copyright (C) 2022-2022 TBSort project
+/* tbsort.cpp - A general O(n * log(log(n)) sort
+ * Copyright (C) 2024 Tobias Bergmann
  *
- * Authors: Tobias Bergmann <708-145@quantentunnel.de>
- *
- * This program is free software; you can redistribute it and/or modify
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
+ * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -16,12 +12,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111, USA.
- *
- * This program is also available under a commercial proprietary license.
- * For more information, contact me at 708-145@quantentunnel.de.
- *****************************************************************************/
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
 #include <math.h>
 #include <vector>
@@ -31,13 +23,13 @@
 
 // compile:	 gcc -o tbsort tbsort.cpp -lm -lstdc++; ./tbsort
 
-// UTILITY FUNCTIONS 
+// UTILITY FUNCTIONS
 template <typename T>
 T myclamp(const T& n, const T& lower, const T& upper) {
   return n <= lower ? lower : n >= upper ? upper : n;
 }
 
-// Function to print an array 
+// Function to print an array
 void printArray(int A[], int size)
 {
     for (int i = 0; i < size; i++)
@@ -67,13 +59,13 @@ int search(int a[], int n, int e)
     return l;
 }
 
-// l is for left index and r is 
-// right index of the sub-array 
-// of arr to be sorted 
-void TBSort(int arr[], 
+// l is for left index and r is
+// right index of the sub-array
+// of arr to be sorted
+void TBSort(int arr[],
             int l, int r)
 {
-    if (l < r) 
+    if (l < r)
     {
 		// TREE step : sample and sort tree content
 		int numElements = r - l + 1;
@@ -137,7 +129,7 @@ int main()
     printArray(arr, arr_size);
 
     TBSort(arr, 0, arr_size - 1);
-  
+
     printf("\nTBSorted array is ");
     printArray(arr, arr_size);
     return 0;
