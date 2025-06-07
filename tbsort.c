@@ -1,5 +1,5 @@
 /* tbsort.c - A general O(n * log(log(n)) sort
- * Copyright (C) 2024 The TBSort Authors
+ * Copyright (C) 2024 Tobias Bergmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
