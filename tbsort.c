@@ -96,6 +96,56 @@ void insertionSort(int arr[], int n) {
     }
 }
 
+#define BLOCK_SIZE 16
+
+typedef struct BlockNode_s { // Use _s suffix to avoid conflict if BlockNode is used elsewhere
+    int elements[BLOCK_SIZE];
+    int count;
+    struct BlockNode_s* next;
+    int externally_allocated; // 0 for pool, 1 for malloc
+} BlockNode;
+
+typedef struct {
+    BlockNode* head;
+    BlockNode* tail;
+    int total_elements;
+} DynamicBin;
+
+typedef struct {
+    int* elements;
+    int size;
+} ConsolidatedBinInfo;
+
+static BlockNode* allocate_new_block(DynamicBin* bin, char** pool_next_free_ptr, char* pool_end_ptr) {
+    BlockNode* new_block_node = NULL;
+    size_t block_node_size = sizeof(BlockNode);
+
+    if (*pool_next_free_ptr + block_node_size <= pool_end_ptr) {
+        new_block_node = (BlockNode*)(*pool_next_free_ptr);
+        *pool_next_free_ptr += block_node_size;
+        new_block_node->externally_allocated = 0;
+    } else {
+        new_block_node = (BlockNode*)malloc(block_node_size);
+        if (!new_block_node) {
+            perror("Failed to allocate new block node externally");
+            return NULL; // Critical error or handle more gracefully
+        }
+        new_block_node->externally_allocated = 1;
+    }
+
+    new_block_node->count = 0;
+    new_block_node->next = NULL;
+
+    if (bin->head == NULL) {
+        bin->head = new_block_node;
+        bin->tail = new_block_node;
+    } else {
+        bin->tail->next = new_block_node;
+        bin->tail = new_block_node;
+    }
+    return new_block_node;
+}
+
 // Structure for bins
 // typedef struct {
 //     int* elements;
@@ -241,147 +291,232 @@ void TBSort(int arr[], int l, int r) {
         }
     }
 
-    int* final_bin_sizes = (int*)calloc(binCount, sizeof(int));
-    if (!final_bin_sizes) {
-        perror("Failed to allocate memory for final_bin_sizes");
-        // Free other allocated memory before returning
-        free(sampleTree);
-        free(targetbin);
-        free(slope);
-        free(offset);
+    // main_pool will store BlockNode structures.
+    // For now, we allocate it as char* to manage bytes for the bump allocator.
+    char* main_pool = (char*)malloc(numElements * sizeof(int)); // Placeholder size
+    if (!main_pool) {
+        perror("Failed to allocate memory for main_pool");
+        // Free sampleTree, targetbin, slope, offset before returning
+        if (sampleTree) free(sampleTree);
+        if (targetbin) free(targetbin);
+        if (slope) free(slope);
+        if (offset) free(offset);
+        return;
+    }
+    char* pool_next_free_ptr = main_pool;
+    char* pool_end_ptr = main_pool + numElements * sizeof(int);
+
+    DynamicBin* dynamic_bins = (DynamicBin*)calloc(binCount, sizeof(DynamicBin));
+    if (!dynamic_bins) {
+        perror("Failed to allocate memory for dynamic_bins");
+        // Free previously allocated memory: sampleTree, targetbin, slope, offset, main_pool
+        if (sampleTree) free(sampleTree);
+        if (targetbin) free(targetbin);
+        if (slope) free(slope);
+        if (offset) free(offset);
+        if (main_pool) free(main_pool);
         return;
     }
 
-    // Distribute elements from arr[l...r] into bins
+    // int* final_bin_sizes = (int*)calloc(binCount, sizeof(int)); // No longer needed
+    // if (!final_bin_sizes) {
+    //     perror("Failed to allocate memory for final_bin_sizes");
+    //     // Free other allocated memory before returning
+    //     if (sampleTree) free(sampleTree);
+    //     if (targetbin) free(targetbin);
+    //     if (slope) free(slope);
+    //     if (offset) free(offset);
+    //     if (main_pool) free(main_pool);
+    //     if (dynamic_bins) free(dynamic_bins);
+    //     return;
+    // }
+
+    // Loop to distribute elements into bins
     for (int i = 0; i < numElements; i++) {
         int element_val = arr[l + i];
-        int mypos = search(sampleTree, treeSize, element_val); // search returns index of element <= e
 
-        // Adjust mypos for slope/offset array indexing and logic
-        // if element_val is smaller than smallest in sampleTree, search returns -1
-        // if element_val is larger than largest in sampleTree, search returns treeSize-1
-        // The slope/offset arrays are indexed from 0 to treeSize.
-        // mypos from search: -1 to treeSize-1
-        // if mypos is -1 (element_val < sampleTree[0]), use slope[0], offset[0] -> maps to M_(-1) to M_0
-        // if mypos is k where sampleTree[k] <= element_val < sampleTree[k+1], use slope[k+1], offset[k+1] -> maps to M_k to M_{k+1}
-        // if mypos is treeSize-1 and element_val >= sampleTree[treeSize-1], use slope[treeSize], offset[treeSize] -> maps to M_{treeSize-1} to M_{treeSize}
-
-        int slope_offset_idx;
-        if (mypos == -1) { // element_val < sampleTree[0]
-            slope_offset_idx = 0;
-        } else if (mypos == treeSize - 1 && element_val >= sampleTree[treeSize - 1]) { // element_val >= largest element in sampleTree
-             // This means element_val falls in the last segment, defined by sampleTree[treeSize-1] and "infinity"
-            slope_offset_idx = treeSize; // Use the last slope/offset pair
-        } else {
-            // sampleTree[mypos] <= element_val.
-            // If element_val < sampleTree[mypos+1], then it's in segment mypos to mypos+1. Use slope_offset_idx = mypos + 1.
-            // If element_val == sampleTree[mypos], it is also covered by mypos+1 (segment from sampleTree[mypos] to sampleTree[mypos+1])
-            // unless sampleTree[mypos] == sampleTree[mypos+1]. The search gives first index k where a[k]<=e.
-            slope_offset_idx = mypos + 1;
-        }
-        // slope and offset arrays have (treeSize+1) elements, indexed 0 to treeSize.
-        // So slope_offset_idx should be clamped to [0, treeSize].
-        // The above logic should result in slope_offset_idx in [0, treeSize].
-        // Example: treeSize = 2. sampleTree has T0, T1.
-        // slope/offset indices: 0, 1, 2.
-        // < T0: mypos = -1. idx = 0. (Correct: uses M-1 to M0)
-        // >= T1: mypos = 1. idx = 2. (Correct: uses M1 to M2 (infinity))
-        // T0 <= val < T1: mypos = 0. idx = 1. (Correct: uses M0 to M1)
-
-        int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
-
-        // Add element_val to bins[mybin_idx]
-        // if (bins[mybin_idx].size >= bins[mybin_idx].capacity) {
-        //     bins[mybin_idx].capacity = (bins[mybin_idx].capacity == 0) ? 1 : bins[mybin_idx].capacity * 2;
-        //     int* new_elements = (int*)realloc(bins[mybin_idx].elements, bins[mybin_idx].capacity * sizeof(int));
-        //     if (!new_elements) {
-        //         perror("Failed to reallocate memory for bin elements");
-        //         // Extensive cleanup needed here
-        //         return;
-        //     }
-        //     bins[mybin_idx].elements = new_elements;
-        // }
-        // bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
-        final_bin_sizes[mybin_idx]++;
-    }
-
-    int* temp_arr = (int*)malloc(numElements * sizeof(int));
-    if (!temp_arr) {
-        perror("Failed to allocate memory for temp_arr");
-        free(sampleTree);
-        free(targetbin);
-        free(slope);
-        free(offset);
-        free(final_bin_sizes); // final_bin_sizes was allocated before temp_arr
-        return;
-    }
-
-    int* bin_write_pointers = (int*)malloc(binCount * sizeof(int));
-    if (!bin_write_pointers) {
-        perror("Failed to allocate memory for bin_write_pointers");
-        free(sampleTree);
-        free(targetbin);
-        free(slope);
-        free(offset);
-        free(final_bin_sizes);
-        free(temp_arr); // temp_arr was allocated before bin_write_pointers
-        return;
-    }
-
-    int current_offset = 0;
-    for (int i = 0; i < binCount; i++) {
-        bin_write_pointers[i] = current_offset;
-        current_offset += final_bin_sizes[i];
-    }
-
-    for (int i = 0; i < numElements; i++) {
-        int element_val = arr[l + i];
-        // Copy the logic for calculating mybin_idx from the sizing loop
+        // --- Begin: Calculate mybin_idx (copied from original/previous logic) ---
         int mypos = search(sampleTree, treeSize, element_val);
         int slope_offset_idx;
-        if (mypos == -1) { slope_offset_idx = 0; }
-        else if (mypos == treeSize - 1 && element_val >= sampleTree[treeSize - 1]) { slope_offset_idx = treeSize; }
-        else { slope_offset_idx = mypos + 1; }
-        int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
-
-        temp_arr[bin_write_pointers[mybin_idx]] = element_val;
-        bin_write_pointers[mybin_idx]++;
-    }
-
-    free(bin_write_pointers);
-
-    // 4. SORT Step
-    int binThreshold = (int)(5 * numElements / (float)binCount);
-    if (binCount == 0) binThreshold = numElements +1; // Avoid division by zero if binCount somehow is 0
-
-    // int curpos = l; // No longer used here
-    int current_temp_arr_offset = 0;
-    for (int i = 0; i < binCount; i++) {
-        int current_bin_size = final_bin_sizes[i];
-        if (current_bin_size == 0) {
-            // free(bins[i].elements); // Already handled, bins[i].elements doesn't exist
-            current_temp_arr_offset += current_bin_size; // Should be 0, but for completeness
-            continue;
-        }
-
-        int bin_l_in_temp = current_temp_arr_offset;
-        int bin_r_in_temp = current_temp_arr_offset + current_bin_size - 1;
-
-        if (current_bin_size < binThreshold) {
-            insertionSort(&temp_arr[bin_l_in_temp], current_bin_size);
+        if (mypos == -1) {
+            slope_offset_idx = 0;
+        } else if (mypos == treeSize - 1 && element_val >= sampleTree[treeSize - 1]) {
+            slope_offset_idx = treeSize;
         } else {
-            TBSort(temp_arr, bin_l_in_temp, bin_r_in_temp);
+            slope_offset_idx = mypos + 1;
+        }
+        // Ensure slope_offset_idx is within bounds for slope/offset arrays [0, treeSize]
+        // treeSize for slope/offset arrays means treeSize+1 elements.
+        // Max index is treeSize. Min index is 0.
+        if (slope_offset_idx > treeSize) slope_offset_idx = treeSize;
+        if (slope_offset_idx < 0) slope_offset_idx = 0; // Should not happen with logic above
+
+        int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
+        // --- End: Calculate mybin_idx ---
+
+        DynamicBin* current_bin = &dynamic_bins[mybin_idx];
+        BlockNode* tail_block = current_bin->tail;
+
+        if (tail_block == NULL || tail_block->count == BLOCK_SIZE) {
+            tail_block = allocate_new_block(current_bin, &pool_next_free_ptr, pool_end_ptr);
+            if (tail_block == NULL) {
+                fprintf(stderr, "TBSort: Critical block allocation failure during distribution.\n");
+                // Perform cleanup of all allocated resources similar to other error exits
+                if (sampleTree) free(sampleTree);
+                if (targetbin) free(targetbin);
+                if (slope) free(slope);
+                if (offset) free(offset);
+                if (main_pool) free(main_pool);
+                // Need to free BlockNodes allocated so far before freeing dynamic_bins array
+                for (int b_idx = 0; b_idx < binCount; ++b_idx) {
+                    BlockNode* bn = dynamic_bins[b_idx].head;
+                    while (bn) {
+                        BlockNode* next_bn = bn->next;
+                        if (bn->externally_allocated) free(bn); // Only free if malloc'd
+                        bn = next_bn;
+                    }
+                }
+                if (dynamic_bins) free(dynamic_bins);
+                // if (final_bin_sizes) free(final_bin_sizes); // final_bin_sizes is removed
+                return; // Indicate failure
+            }
         }
 
-        // memcpy(&arr[curpos], bins[i].elements, bins[i].size * sizeof(int)); // Replaced by copy back from temp_arr
-        // curpos += bins[i].size; // Replaced by overall copy
-        // free(bins[i].elements); // Already handled
-
-        current_temp_arr_offset += current_bin_size;
+        tail_block->elements[tail_block->count++] = element_val;
+        current_bin->total_elements++;
+        // final_bin_sizes[mybin_idx]++; // No longer needed, use current_bin->total_elements
     }
 
-    if (temp_arr) { // Ensure temp_arr was allocated before trying to copy from it
-        memcpy(&arr[l], temp_arr, numElements * sizeof(int));
+    // final_bin_sizes is no longer needed and should have been removed.
+    // If its free call is still present later, it should be removed.
+
+    ConsolidatedBinInfo* consolidated_bins_info = (ConsolidatedBinInfo*)calloc(binCount, sizeof(ConsolidatedBinInfo));
+    if (!consolidated_bins_info) {
+        perror("Failed to allocate memory for consolidated_bins_info");
+        // Full cleanup
+        for (int b_idx = 0; b_idx < binCount; ++b_idx) {
+            BlockNode* bn = dynamic_bins[b_idx].head;
+            while (bn) {
+                BlockNode* next_bn = bn->next;
+                if (bn->externally_allocated) free(bn);
+                bn = next_bn;
+            }
+        }
+        if (dynamic_bins) free(dynamic_bins);
+        if (sampleTree) free(sampleTree);
+        if (targetbin) free(targetbin);
+        if (slope) free(slope);
+        if (offset) free(offset);
+        if (main_pool) free(main_pool);
+        return;
+    }
+
+    for (int i = 0; i < binCount; i++) {
+        DynamicBin* current_bin = &dynamic_bins[i];
+        consolidated_bins_info[i].elements = NULL;
+        consolidated_bins_info[i].size = 0;
+
+        if (current_bin->total_elements > 0) {
+            consolidated_bins_info[i].size = current_bin->total_elements;
+            consolidated_bins_info[i].elements = (int*)malloc(current_bin->total_elements * sizeof(int));
+
+            if (!consolidated_bins_info[i].elements) {
+                perror("Failed to allocate memory for a consolidated bin");
+                consolidated_bins_info[i].size = 0;
+                // Critical error: attempt to free already allocated parts and then the main array
+                for (int k = 0; k < i; ++k) { // Free successfully allocated elements arrays before this one
+                    if (consolidated_bins_info[k].elements) {
+                        free(consolidated_bins_info[k].elements);
+                        consolidated_bins_info[k].elements = NULL;
+                    }
+                }
+                // Free the main consolidated_bins_info array itself as the process is incomplete
+                if (consolidated_bins_info) free(consolidated_bins_info);
+                consolidated_bins_info = NULL; // Mark as freed to avoid double free in main cleanup
+
+                // Now, perform the rest of the cleanup like other major allocation failures
+                for (int b_idx = 0; b_idx < binCount; ++b_idx) { // Cleanup dynamic_bins' BlockNodes
+                    BlockNode* bn = dynamic_bins[b_idx].head;
+                    while (bn) {
+                        BlockNode* next_bn = bn->next;
+                        if (bn->externally_allocated) free(bn);
+                        bn = next_bn;
+                    }
+                }
+                if (dynamic_bins) free(dynamic_bins);
+                if (sampleTree) free(sampleTree);
+                if (targetbin) free(targetbin);
+                if (slope) free(slope);
+                if (offset) free(offset);
+                if (main_pool) free(main_pool);
+                return; // Exit TBSort due to critical memory failure
+            }
+
+            if (consolidated_bins_info[i].elements) {
+                int* writer_ptr = consolidated_bins_info[i].elements;
+                BlockNode* bn = current_bin->head;
+                while (bn) {
+                    memcpy(writer_ptr, bn->elements, bn->count * sizeof(int));
+                    writer_ptr += bn->count;
+                    bn = bn->next;
+                }
+            }
+
+            BlockNode* bn_to_free = current_bin->head;
+            while (bn_to_free) {
+                BlockNode* next_bn = bn_to_free->next;
+                if (bn_to_free->externally_allocated) {
+                    free(bn_to_free);
+                }
+                bn_to_free = next_bn;
+            }
+            current_bin->head = NULL;
+            current_bin->tail = NULL;
+            current_bin->total_elements = 0;
+        }
+    }
+
+    // 4. SORT Step - Perform sorting on consolidated bins
+    int binThreshold = 0;
+    if (binCount > 0) {
+        binThreshold = (int)(5 * (double)numElements / binCount);
+    } else if (numElements > 0) {
+        binThreshold = numElements + 1;
+    }
+
+    for (int i = 0; i < binCount; i++) {
+        if (consolidated_bins_info[i].elements != NULL && consolidated_bins_info[i].size > 0) {
+            if (consolidated_bins_info[i].size < binThreshold) {
+                insertionSort(consolidated_bins_info[i].elements, consolidated_bins_info[i].size);
+            } else {
+                // Recursive call to TBSort
+                TBSort(consolidated_bins_info[i].elements, 0, consolidated_bins_info[i].size - 1);
+            }
+        }
+    }
+    // The old memcpy from temp_arr to arr[l] will be replaced by a merge step later.
+
+    int current_pos_in_arr = l;
+    for (int i = 0; i < binCount; i++) {
+        if (consolidated_bins_info[i].elements != NULL && consolidated_bins_info[i].size > 0) {
+            if (current_pos_in_arr + consolidated_bins_info[i].size > r + 1) {
+                fprintf(stderr, "TBSort: Error! Overrun while copying sorted bins back to original array. Data corruption likely.\n");
+                // Free remaining elements to avoid memory leaks on error
+                for (int j = i; j < binCount; ++j) { // Start from current bin
+                    if (consolidated_bins_info[j].elements != NULL) {
+                        free(consolidated_bins_info[j].elements);
+                        consolidated_bins_info[j].elements = NULL;
+                    }
+                }
+                break;
+            }
+            memcpy(&arr[current_pos_in_arr], consolidated_bins_info[i].elements, consolidated_bins_info[i].size * sizeof(int));
+            current_pos_in_arr += consolidated_bins_info[i].size;
+
+            free(consolidated_bins_info[i].elements);
+            consolidated_bins_info[i].elements = NULL;
+            consolidated_bins_info[i].size = 0;
+        }
     }
 
     // free(bins); // Already handled
@@ -389,8 +524,11 @@ void TBSort(int arr[], int l, int r) {
     if (targetbin) free(targetbin);
     if (slope) free(slope);
     if (offset) free(offset);
-    if (final_bin_sizes) free(final_bin_sizes);
-    if (temp_arr) free(temp_arr);
+    if (dynamic_bins) free(dynamic_bins);
+    if (consolidated_bins_info) free(consolidated_bins_info);
+    // if (final_bin_sizes) free(final_bin_sizes); // Should be removed by now
+    // if (temp_arr) free(temp_arr); // Removed
+    if (main_pool) free(main_pool);
 }
 
 int main(int argc, char *argv[]) {
