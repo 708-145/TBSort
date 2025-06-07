@@ -97,11 +97,11 @@ void insertionSort(int arr[], int n) {
 }
 
 // Structure for bins
-typedef struct {
-    int* elements;
-    int size;
-    int capacity;
-} Bin;
+// typedef struct {
+//     int* elements;
+//     int size;
+//     int capacity;
+// } Bin;
 
 
 // TBSort function implementation
@@ -182,26 +182,26 @@ void TBSort(int arr[], int l, int r) {
     if (binCount == 0) binCount = 1; // Ensure at least one bin
 
 
-    Bin* bins = (Bin*)calloc(binCount, sizeof(Bin)); // Use calloc to zero-initialize
-    if (!bins) {
-        perror("Failed to allocate memory for bins");
-        free(sampleTree);
-        return;
-    }
+    // Bin* bins = (Bin*)calloc(binCount, sizeof(Bin)); // Use calloc to zero-initialize
+    // if (!bins) {
+    //     perror("Failed to allocate memory for bins");
+    //     free(sampleTree);
+    //     return;
+    // }
 
-    for (int i = 0; i < binCount; i++) {
-        bins[i].capacity = 4; // Initial capacity
-        bins[i].elements = (int*)malloc(bins[i].capacity * sizeof(int));
-        if (!bins[i].elements) {
-            perror("Failed to allocate memory for bin elements");
-            // Free previously allocated memory
-            for (int j = 0; j < i; j++) free(bins[j].elements);
-            free(bins);
-            free(sampleTree);
-            return;
-        }
-        bins[i].size = 0;
-    }
+    // for (int i = 0; i < binCount; i++) {
+    //     bins[i].capacity = 4; // Initial capacity
+    //     bins[i].elements = (int*)malloc(bins[i].capacity * sizeof(int));
+    //     if (!bins[i].elements) {
+    //         perror("Failed to allocate memory for bin elements");
+    //         // Free previously allocated memory
+    //         for (int j = 0; j < i; j++) free(bins[j].elements);
+    //         free(bins);
+    //         free(sampleTree);
+    //         return;
+    //     }
+    //     bins[i].size = 0;
+    // }
 
     // Calculate targetbin, slope, and offset
     int targetbinSize = treeSize + 2;
@@ -211,8 +211,8 @@ void TBSort(int arr[], int l, int r) {
 
     if (!targetbin || !slope || !offset) {
          perror("Failed to allocate memory for targetbin/slope/offset");
-         for (int i = 0; i < binCount; i++) free(bins[i].elements);
-         free(bins);
+         // for (int i = 0; i < binCount; i++) free(bins[i].elements); // Removed bins access
+         // free(bins); // Removed bins access
          free(sampleTree);
          if(targetbin) free(targetbin);
          if(slope) free(slope);
@@ -241,6 +241,16 @@ void TBSort(int arr[], int l, int r) {
         }
     }
 
+    int* final_bin_sizes = (int*)calloc(binCount, sizeof(int));
+    if (!final_bin_sizes) {
+        perror("Failed to allocate memory for final_bin_sizes");
+        // Free other allocated memory before returning
+        free(sampleTree);
+        free(targetbin);
+        free(slope);
+        free(offset);
+        return;
+    }
 
     // Distribute elements from arr[l...r] into bins
     for (int i = 0; i < numElements; i++) {
@@ -281,59 +291,106 @@ void TBSort(int arr[], int l, int r) {
         int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
 
         // Add element_val to bins[mybin_idx]
-        if (bins[mybin_idx].size >= bins[mybin_idx].capacity) {
-            bins[mybin_idx].capacity = (bins[mybin_idx].capacity == 0) ? 1 : bins[mybin_idx].capacity * 2;
-            int* new_elements = (int*)realloc(bins[mybin_idx].elements, bins[mybin_idx].capacity * sizeof(int));
-            if (!new_elements) {
-                perror("Failed to reallocate memory for bin elements");
-                // Extensive cleanup needed here
-                return;
-            }
-            bins[mybin_idx].elements = new_elements;
-        }
-        bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
+        // if (bins[mybin_idx].size >= bins[mybin_idx].capacity) {
+        //     bins[mybin_idx].capacity = (bins[mybin_idx].capacity == 0) ? 1 : bins[mybin_idx].capacity * 2;
+        //     int* new_elements = (int*)realloc(bins[mybin_idx].elements, bins[mybin_idx].capacity * sizeof(int));
+        //     if (!new_elements) {
+        //         perror("Failed to reallocate memory for bin elements");
+        //         // Extensive cleanup needed here
+        //         return;
+        //     }
+        //     bins[mybin_idx].elements = new_elements;
+        // }
+        // bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
+        final_bin_sizes[mybin_idx]++;
     }
+
+    int* temp_arr = (int*)malloc(numElements * sizeof(int));
+    if (!temp_arr) {
+        perror("Failed to allocate memory for temp_arr");
+        free(sampleTree);
+        free(targetbin);
+        free(slope);
+        free(offset);
+        free(final_bin_sizes); // final_bin_sizes was allocated before temp_arr
+        return;
+    }
+
+    int* bin_write_pointers = (int*)malloc(binCount * sizeof(int));
+    if (!bin_write_pointers) {
+        perror("Failed to allocate memory for bin_write_pointers");
+        free(sampleTree);
+        free(targetbin);
+        free(slope);
+        free(offset);
+        free(final_bin_sizes);
+        free(temp_arr); // temp_arr was allocated before bin_write_pointers
+        return;
+    }
+
+    int current_offset = 0;
+    for (int i = 0; i < binCount; i++) {
+        bin_write_pointers[i] = current_offset;
+        current_offset += final_bin_sizes[i];
+    }
+
+    for (int i = 0; i < numElements; i++) {
+        int element_val = arr[l + i];
+        // Copy the logic for calculating mybin_idx from the sizing loop
+        int mypos = search(sampleTree, treeSize, element_val);
+        int slope_offset_idx;
+        if (mypos == -1) { slope_offset_idx = 0; }
+        else if (mypos == treeSize - 1 && element_val >= sampleTree[treeSize - 1]) { slope_offset_idx = treeSize; }
+        else { slope_offset_idx = mypos + 1; }
+        int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
+
+        temp_arr[bin_write_pointers[mybin_idx]] = element_val;
+        bin_write_pointers[mybin_idx]++;
+    }
+
+    free(bin_write_pointers);
 
     // 4. SORT Step
     int binThreshold = (int)(5 * numElements / (float)binCount);
     if (binCount == 0) binThreshold = numElements +1; // Avoid division by zero if binCount somehow is 0
 
-    int curpos = l;
+    // int curpos = l; // No longer used here
+    int current_temp_arr_offset = 0;
     for (int i = 0; i < binCount; i++) {
-        if (bins[i].size == 0) {
-            free(bins[i].elements); // Free even if empty, as it was allocated
+        int current_bin_size = final_bin_sizes[i];
+        if (current_bin_size == 0) {
+            // free(bins[i].elements); // Already handled, bins[i].elements doesn't exist
+            current_temp_arr_offset += current_bin_size; // Should be 0, but for completeness
             continue;
         }
 
-        if (bins[i].size < binThreshold) {
-            insertionSort(bins[i].elements, bins[i].size);
+        int bin_l_in_temp = current_temp_arr_offset;
+        int bin_r_in_temp = current_temp_arr_offset + current_bin_size - 1;
+
+        if (current_bin_size < binThreshold) {
+            insertionSort(&temp_arr[bin_l_in_temp], current_bin_size);
         } else {
-            TBSort(bins[i].elements, 0, bins[i].size - 1);
+            TBSort(temp_arr, bin_l_in_temp, bin_r_in_temp);
         }
 
-        if (curpos + bins[i].size > r + 1) {
-            // Error: trying to write past the allocated space for arr segment
-            // This indicates an issue with bin distribution or numElements calculation
-            fprintf(stderr, "Error: TBSort trying to write out of bounds.\n");
-            // Free remaining allocated memory
-            for (int k = i; k < binCount; k++) free(bins[k].elements);
-            free(bins);
-            free(sampleTree);
-            free(targetbin);
-            free(slope);
-            free(offset);
-            return; // Critical error
-        }
-        memcpy(&arr[curpos], bins[i].elements, bins[i].size * sizeof(int));
-        curpos += bins[i].size;
-        free(bins[i].elements);
+        // memcpy(&arr[curpos], bins[i].elements, bins[i].size * sizeof(int)); // Replaced by copy back from temp_arr
+        // curpos += bins[i].size; // Replaced by overall copy
+        // free(bins[i].elements); // Already handled
+
+        current_temp_arr_offset += current_bin_size;
     }
 
-    free(bins);
-    free(sampleTree);
-    free(targetbin);
-    free(slope);
-    free(offset);
+    if (temp_arr) { // Ensure temp_arr was allocated before trying to copy from it
+        memcpy(&arr[l], temp_arr, numElements * sizeof(int));
+    }
+
+    // free(bins); // Already handled
+    if (sampleTree) free(sampleTree);
+    if (targetbin) free(targetbin);
+    if (slope) free(slope);
+    if (offset) free(offset);
+    if (final_bin_sizes) free(final_bin_sizes);
+    if (temp_arr) free(temp_arr);
 }
 
 int main(int argc, char *argv[]) {
@@ -385,6 +442,36 @@ int main(int argc, char *argv[]) {
   TBSort(arr_tbsort, 0, n_tbsort - 1);
   printf("\nArray after TBSort (new test case): \n");
   printArray(arr_tbsort, n_tbsort);
+  printf("\n");
+
+  // Test TBSort with empty array
+  int arr_empty[] = {};
+  int n_empty = 0;
+  printf("Array before TBSort (empty array): \n");
+  printArray(arr_empty, n_empty);
+  TBSort(arr_empty, 0, n_empty - 1);
+  printf("\nArray after TBSort (empty array): \n");
+  printArray(arr_empty, n_empty);
+  printf("\n");
+
+  // Test TBSort with single element array
+  int arr_single[] = {42};
+  int n_single = 1;
+  printf("Array before TBSort (single element array): \n");
+  printArray(arr_single, n_single);
+  TBSort(arr_single, 0, n_single - 1);
+  printf("\nArray after TBSort (single element array): \n");
+  printArray(arr_single, n_single);
+  printf("\n");
+
+  // Test TBSort with array of all duplicates
+  int arr_dups[] = {5, 5, 5, 5, 5};
+  int n_dups = sizeof(arr_dups) / sizeof(arr_dups[0]);
+  printf("Array before TBSort (all duplicates array): \n");
+  printArray(arr_dups, n_dups);
+  TBSort(arr_dups, 0, n_dups - 1);
+  printf("\nArray after TBSort (all duplicates array): \n");
+  printArray(arr_dups, n_dups);
   printf("\n");
 
   return 0;
