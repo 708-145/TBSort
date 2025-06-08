@@ -1,0 +1,24 @@
+Starting benchmark comparisons between TBSort_int64 and qsort.
+=============================================================
+
+Benchmarking for N = 50 elements:
+  TBSort_int64 time: 0.000076 seconds
+  qsort time:        0.000006 seconds
+-------------------------------------------------------------
+
+Benchmarking for N = 1000 elements:
+  TBSort_int64 time: 0.000166 seconds
+  qsort time:        0.000129 seconds
+-------------------------------------------------------------
+
+Benchmarking for N = 1000000 elements:
+  TBSort_int64 time: 0.414603 seconds
+  qsort time:        0.335814 seconds
+-------------------------------------------------------------
+
+Benchmarking for N = 20000000 elements:
+  TBSort_int64 time: 12.109451 seconds
+  qsort time:        8.354123 seconds
+-------------------------------------------------------------
+
+Benchmark finished.
