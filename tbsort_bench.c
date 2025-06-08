@@ -86,11 +86,14 @@ int main() {
         copy_int64_array(arr_orig, arr_qsort, current_size);
 
         // Benchmark TBSort_int64
+        TBSortTimings tbs_timings; // Declare the struct
         clock_t start_time = clock();
-        TBSort_int64(arr_tbsort, 0, current_size - 1);
+        // Call with pointer to struct and depth 0
+        TBSort_int64(arr_tbsort, 0, current_size - 1, &tbs_timings, 0);
         clock_t end_time = clock();
         double tbsort_duration = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-        printf("  TBSort_int64 time: %f seconds\n", tbsort_duration);
+        // Print using struct members
+        printf("  TBSort_int64 time: %f seconds (Tree: %f, Bin: %f, Sort: %f)\n", tbsort_duration, tbs_timings.tree_duration, tbs_timings.bin_duration, tbs_timings.sort_duration);
 
         // Benchmark qsort
         start_time = clock();

@@ -22,8 +22,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include <time.h> // For srand and time
+#include <time.h> // For srand and time, and clock()
 #include <stdint.h> // For int64_t
+#include "tbsort_int64.h" // For TBSortTimings struct
 
 // Function to swap two elements
 void swap(int64_t* xp, int64_t* yp) {
@@ -110,7 +111,14 @@ typedef struct {
 
 
 // TBSort function implementation
-void TBSort_int64(int64_t arr[], int l, int r) {
+void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth) {
+    // Initialize timings at the top-level call
+    if (depth == 0 && timings != NULL) {
+        timings->tree_duration = 0.0;
+        timings->bin_duration = 0.0;
+        timings->sort_duration = 0.0;
+    }
+
     // 1. Base Case
     if (l >= r) {
         return;
@@ -136,6 +144,11 @@ void TBSort_int64(int64_t arr[], int l, int r) {
     }
 
     // 2. TREE Step
+    clock_t tree_start_time, tree_end_time;
+    if (depth == 0 && timings != NULL) {
+        tree_start_time = clock();
+    }
+
     int treeSize;
     if (numElements < 4) { // e.g. log2(log2(3)) is problematic
         treeSize = 1; // Should be handled by the direct sort above, but as a fallback
@@ -172,7 +185,17 @@ void TBSort_int64(int64_t arr[], int l, int r) {
     }
     insertionSort(sampleTree, treeSize); // Sort the sampleTree
 
+    if (depth == 0 && timings != NULL) {
+        tree_end_time = clock();
+        timings->tree_duration += ((double)(tree_end_time - tree_start_time)) / CLOCKS_PER_SEC;
+    }
+
     // 3. BIN Step
+    clock_t bin_start_time, bin_end_time;
+    if (depth == 0 && timings != NULL) {
+        bin_start_time = clock();
+    }
+
     int binCount;
     double logVal = log2(numElements);
     if (logVal <= 0 || numElements < 2) { // Avoid division by zero or log of <=1
@@ -299,7 +322,17 @@ void TBSort_int64(int64_t arr[], int l, int r) {
         bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
     }
 
+    if (depth == 0 && timings != NULL) {
+        bin_end_time = clock();
+        timings->bin_duration += ((double)(bin_end_time - bin_start_time)) / CLOCKS_PER_SEC;
+    }
+
     // 4. SORT Step
+    clock_t sort_start_time, sort_end_time;
+    if (depth == 0 && timings != NULL) {
+        sort_start_time = clock();
+    }
+
     int binThreshold = (int)(5 * numElements / (float)binCount);
     if (binCount == 0) binThreshold = numElements +1; // Avoid division by zero if binCount somehow is 0
 
@@ -313,7 +346,7 @@ void TBSort_int64(int64_t arr[], int l, int r) {
         if (bins[i].size < binThreshold) {
             insertionSort(bins[i].elements, bins[i].size);
         } else {
-            TBSort_int64(bins[i].elements, 0, bins[i].size - 1);
+            TBSort_int64(bins[i].elements, 0, bins[i].size - 1, timings, depth + 1);
         }
 
         if (curpos + bins[i].size > r + 1) {
@@ -332,6 +365,11 @@ void TBSort_int64(int64_t arr[], int l, int r) {
         memcpy(&arr[curpos], bins[i].elements, bins[i].size * sizeof(int64_t));
         curpos += bins[i].size;
         free(bins[i].elements);
+    }
+
+    if (depth == 0 && timings != NULL) {
+        sort_end_time = clock();
+        timings->sort_duration += ((double)(sort_end_time - sort_start_time)) / CLOCKS_PER_SEC;
     }
 
     free(bins);
