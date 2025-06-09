@@ -103,10 +103,20 @@ void insertionSort(int64_t arr[], int n) {
 }
 
 // Structure for bins
-typedef struct {
+
+// Near the top of tbsort_int64.c, before the Bin structure definition
+typedef struct BinBlock {
     int64_t* elements;
-    int size;
-    int capacity;
+    int size; // Number of elements currently in this block
+    int capacity; // Capacity of this block
+    struct BinBlock* next;
+} BinBlock;
+
+typedef struct {
+    BinBlock* head_block;    // First block in the list
+    BinBlock* current_block; // Current block for appending elements
+    int total_elements;     // Total number of elements in this bin across all blocks
+    // int block_capacity; // Store the intended capacity for new blocks (can be passed or calculated at init)
 } Bin;
 
 
@@ -217,18 +227,54 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
         return;
     }
 
+    // Calculate initial_block_capacity for bins
+    int initial_block_capacity = 1;
+    if (binCount > 0) {
+        initial_block_capacity = numElements / binCount / 4;
+    }
+    if (initial_block_capacity < 1) {
+        initial_block_capacity = 1;
+    }
+
     for (int i = 0; i < binCount; i++) {
-        bins[i].capacity = 4; // Initial capacity
-        bins[i].elements = (int64_t*)malloc(bins[i].capacity * sizeof(int64_t));
-        if (!bins[i].elements) {
-            perror("Failed to allocate memory for bin elements");
-            // Free previously allocated memory
-            for (int j = 0; j < i; j++) free(bins[j].elements);
+        BinBlock* new_block = (BinBlock*)malloc(sizeof(BinBlock));
+        if (!new_block) {
+            perror("Failed to allocate memory for BinBlock");
+            // Free previously allocated BinBlocks and their elements
+            for (int j = 0; j < i; j++) {
+                if (bins[j].head_block) { // Check if head_block is not NULL
+                    free(bins[j].head_block->elements);
+                    free(bins[j].head_block);
+                }
+            }
             free(bins);
             free(sampleTree);
             return;
         }
-        bins[i].size = 0;
+
+        new_block->elements = (int64_t*)malloc(initial_block_capacity * sizeof(int64_t));
+        if (!new_block->elements) {
+            perror("Failed to allocate memory for BinBlock elements");
+            free(new_block); // Free the just allocated new_block
+            // Free previously allocated BinBlocks and their elements
+            for (int j = 0; j < i; j++) {
+                 if (bins[j].head_block) { // Check if head_block is not NULL
+                    free(bins[j].head_block->elements);
+                    free(bins[j].head_block);
+                }
+            }
+            free(bins);
+            free(sampleTree);
+            return;
+        }
+
+        new_block->size = 0;
+        new_block->capacity = initial_block_capacity;
+        new_block->next = NULL;
+
+        bins[i].head_block = new_block;
+        bins[i].current_block = new_block;
+        bins[i].total_elements = 0;
     }
 
     // Calculate targetbin, slope, and offset
@@ -239,7 +285,12 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
 
     if (!targetbin || !slope || !offset) {
          perror("Failed to allocate memory for targetbin/slope/offset");
-         for (int i = 0; i < binCount; i++) free(bins[i].elements);
+         for (int i = 0; i < binCount; i++) {
+            if (bins[i].head_block) { // Check if head_block is not NULL
+                free(bins[i].head_block->elements);
+                free(bins[i].head_block);
+            }
+         }
          free(bins);
          free(sampleTree);
          if(targetbin) free(targetbin);
@@ -309,17 +360,37 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
         int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
 
         // Add element_val to bins[mybin_idx]
-        if (bins[mybin_idx].size >= bins[mybin_idx].capacity) {
-            bins[mybin_idx].capacity = (bins[mybin_idx].capacity == 0) ? 1 : bins[mybin_idx].capacity * 2;
-            int64_t* new_elements = (int64_t*)realloc(bins[mybin_idx].elements, bins[mybin_idx].capacity * sizeof(int64_t));
-            if (!new_elements) {
-                perror("Failed to reallocate memory for bin elements");
-                // Extensive cleanup needed here
-                return;
+        // TODO: This part needs to be updated to work with BinBlocks
+        Bin* current_bin = &bins[mybin_idx];
+        BinBlock* current_block = current_bin->current_block;
+
+        if (current_block->size >= current_block->capacity) {
+            // Allocate a new block
+            BinBlock* new_block = (BinBlock*)malloc(sizeof(BinBlock));
+            if (!new_block) {
+                perror("Failed to allocate memory for new BinBlock during element insertion");
+                // More extensive cleanup might be needed here, but this is a runtime critical path
+                return; // Or a more graceful error handling
             }
-            bins[mybin_idx].elements = new_elements;
+            // For simplicity, new blocks double the capacity of the previous one, or use initial_block_capacity if first extension
+            int new_capacity = current_block->capacity * 2; // Or some other strategy
+            new_block->elements = (int64_t*)malloc(new_capacity * sizeof(int64_t));
+            if (!new_block->elements) {
+                perror("Failed to allocate memory for new BinBlock elements during element insertion");
+                free(new_block);
+                // More extensive cleanup might be needed here
+                return; // Or a more graceful error handling
+            }
+            new_block->size = 0;
+            new_block->capacity = new_capacity;
+            new_block->next = NULL;
+
+            current_block->next = new_block;
+            current_bin->current_block = new_block;
+            current_block = new_block; // Switch to the new block
         }
-        bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
+        current_block->elements[current_block->size++] = element_val;
+        current_bin->total_elements++;
     }
 
     if (depth == 0 && timings != NULL) {
@@ -338,33 +409,91 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
 
     int curpos = l;
     for (int i = 0; i < binCount; i++) {
-        if (bins[i].size == 0) {
-            free(bins[i].elements); // Free even if empty, as it was allocated
+        // TODO: This part needs to be updated to work with BinBlocks
+        if (bins[i].total_elements == 0) {
+            // Free the initial block if it's empty and exists
+            if (bins[i].head_block) {
+                free(bins[i].head_block->elements);
+                free(bins[i].head_block);
+            }
             continue;
         }
 
-        if (bins[i].size < binThreshold) {
-            insertionSort(bins[i].elements, bins[i].size);
-        } else {
-            TBSort_int64(bins[i].elements, 0, bins[i].size - 1, timings, depth + 1);
+        // Create a temporary flat array for sorting from all blocks in the bin
+        int64_t* temp_bin_array = (int64_t*)malloc(bins[i].total_elements * sizeof(int64_t));
+        if (!temp_bin_array) {
+            perror("Failed to allocate memory for temp_bin_array for sorting");
+            // Free all allocated memory so far
+             for (int k = 0; k < binCount; k++) {
+                BinBlock* current_block_to_free = bins[k].head_block;
+                while (current_block_to_free) {
+                    BinBlock* next_block_to_free = current_block_to_free->next;
+                    free(current_block_to_free->elements);
+                    free(current_block_to_free);
+                    current_block_to_free = next_block_to_free;
+                }
+            }
+            free(bins);
+            free(sampleTree);
+            free(targetbin);
+            free(slope);
+            free(offset);
+            return;
         }
 
-        if (curpos + bins[i].size > r + 1) {
+        int temp_idx = 0;
+        BinBlock* current_block_to_copy = bins[i].head_block;
+        while (current_block_to_copy) {
+            memcpy(&temp_bin_array[temp_idx], current_block_to_copy->elements, current_block_to_copy->size * sizeof(int64_t));
+            temp_idx += current_block_to_copy->size;
+            current_block_to_copy = current_block_to_copy->next;
+        }
+
+        if (bins[i].total_elements < binThreshold) {
+            insertionSort(temp_bin_array, bins[i].total_elements);
+        } else {
+            TBSort_int64(temp_bin_array, 0, bins[i].total_elements - 1, timings, depth + 1);
+        }
+
+        if (curpos + bins[i].total_elements > r + 1) {
             // Error: trying to write past the allocated space for arr segment
             // This indicates an issue with bin distribution or numElements calculation
             fprintf(stderr, "Error: TBSort_int64 trying to write out of bounds.\n");
             // Free remaining allocated memory
-            for (int k = i; k < binCount; k++) free(bins[k].elements);
-            free(bins);
+            free(temp_bin_array);
+            for (int k = i; k < binCount; k++) { // Start from current bin 'i'
+                BinBlock* current_block_to_free = bins[k].head_block;
+                while (current_block_to_free) {
+                    BinBlock* next_block_to_free = current_block_to_free->next;
+                    free(current_block_to_free->elements);
+                    free(current_block_to_free);
+                    current_block_to_free = next_block_to_free;
+                }
+            }
+            // The loop for k starting from i already handles freeing bin blocks.
+            // No, it needs to handle from current i onwards.
+            // The previous loop for k from 0 to binCount is for a different error scenario (temp_bin_array allocation failure)
+            free(bins); // bins array itself
             free(sampleTree);
             free(targetbin);
             free(slope);
             free(offset);
             return; // Critical error
         }
-        memcpy(&arr[curpos], bins[i].elements, bins[i].size * sizeof(int64_t));
-        curpos += bins[i].size;
-        free(bins[i].elements);
+        memcpy(&arr[curpos], temp_bin_array, bins[i].total_elements * sizeof(int64_t));
+        curpos += bins[i].total_elements;
+
+        // Free the temporary array and the bin blocks
+        free(temp_bin_array);
+        BinBlock* current_block_to_free = bins[i].head_block;
+        while (current_block_to_free) {
+            BinBlock* next_block_to_free = current_block_to_free->next;
+            free(current_block_to_free->elements);
+            free(current_block_to_free);
+            current_block_to_free = next_block_to_free;
+        }
+        // Ensure the head_block is set to NULL after freeing to avoid double free in later cleanup if an error occurs
+        bins[i].head_block = NULL;
     }
 
     if (depth == 0 && timings != NULL) {
