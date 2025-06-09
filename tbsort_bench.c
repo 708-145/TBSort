@@ -51,7 +51,7 @@ void copy_int64_array(const int64_t* src, int64_t* dst, size_t n) {
 }
 
 int main() {
-    size_t sizes[] = {50, 1000, 1000000, 20000000};
+    size_t sizes[] = {30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000, 1000000, 3000000, 10000000, 30000000, 100000000};
     int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
     srand(time(NULL)); // Seed random number generator
