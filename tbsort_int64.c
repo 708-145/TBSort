@@ -80,6 +80,14 @@ int search(int64_t a[], int n, int64_t e) {
     return ans;
 }
 
+// Comparison function for qsort with int64_t
+static int compare_int64_t(const void* a, const void* b) {
+    int64_t val_a = *(const int64_t*)a;
+    int64_t val_b = *(const int64_t*)b;
+    if (val_a < val_b) return -1;
+    if (val_a > val_b) return 1;
+    return 0;
+}
 
 // Function to implement insertion sort
 void insertionSort(int64_t arr[], int n) {
@@ -294,7 +302,9 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
         }
 
         if (currentLeafBuffer->size < smallBufferThreshold) {
-            insertionSort(currentLeafBuffer->elements, currentLeafBuffer->size);
+            if (currentLeafBuffer->size > 1) { // qsort on 0 or 1 elements is undefined or no-op
+                qsort(currentLeafBuffer->elements, currentLeafBuffer->size, sizeof(int64_t), compare_int64_t);
+            }
             if (curpos + currentLeafBuffer->size > r + 1) { /* Error guard */ return; }
             memcpy(&arr[curpos], currentLeafBuffer->elements, currentLeafBuffer->size * sizeof(int64_t));
             curpos += currentLeafBuffer->size;
@@ -400,7 +410,9 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
                     continue;
                 }
                 if (localBins[j].size < localBinThreshold) {
-                    insertionSort(localBins[j].elements, localBins[j].size);
+                    if (localBins[j].size > 1) { // qsort on 0 or 1 elements is undefined or no-op
+                        qsort(localBins[j].elements, localBins[j].size, sizeof(int64_t), compare_int64_t);
+                    }
                 } else {
                     TBSort_int64(localBins[j].elements, 0, localBins[j].size - 1, timings, depth + 1);
                 }
