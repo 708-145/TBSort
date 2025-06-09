@@ -1,0 +1,45 @@
+Comparison of TBSort 'Bin' Phase Runtimes: Original vs. Write-Removed
+
+This analysis compares the runtime of the 'Bin' phase in the TBSort_int64 algorithm
+before and after commenting out the direct element write operation
+(bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;).
+The objective is to quantify the performance cost associated with this specific write
+and the immediate management of bin sizing.
+
+Baseline 'Bin' Phase Durations (Original Code):
+*   N = 50:        0.000006 seconds
+*   N = 1000:      0.000090 seconds
+*   N = 1000000:   0.106413 seconds
+*   N = 20000000:  3.479155 seconds
+
+Modified 'Bin' Phase Durations (Write Operation Removed):
+*   N = 50:        0.000005 seconds
+*   N = 1000:      0.000060 seconds
+*   N = 1000000:   0.063038 seconds
+*   N = 20000000:  1.744854 seconds
+
+Impact of Removing the Write Operation:
+*   N = 50:
+    *   Time Difference: 0.000001 seconds
+    *   Percentage Reduction in Bin Phase Time: ~16.67%
+*   N = 1000:
+    *   Time Difference: 0.000030 seconds
+    *   Percentage Reduction in Bin Phase Time: ~33.33%
+*   N = 1000000:
+    *   Time Difference: 0.043375 seconds
+    *   Percentage Reduction in Bin Phase Time: ~40.76%
+*   N = 20000000:
+    *   Time Difference: 1.734301 seconds
+    *   Percentage Reduction in Bin Phase Time: ~49.85%
+
+Conclusion:
+Removing the direct write operation during the BIN phase leads to a notable
+reduction in the time spent in this phase. The percentage reduction increases
+with the size of the input data, reaching approximately 50% for N = 20,000,000.
+This suggests that the element assignment and bin size increment are significant
+contributors to the BIN phase's overall cost. The remaining time in the
+modified BIN phase is attributable to bin allocation, index calculation,
+and other management overhead.
+
+The code modification in tbsort_int64.c (commenting out the write) was for
+this analysis only and renders the sort non-functional.
