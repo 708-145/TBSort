@@ -319,7 +319,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
             }
             bins[mybin_idx].elements = new_elements;
         }
-        bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
+        // bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
     }
 
     if (depth == 0 && timings != NULL) {
