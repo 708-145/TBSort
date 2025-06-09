@@ -109,6 +109,13 @@ typedef struct {
     int capacity;
 } Bin;
 
+// Structure for leaf node buffers (similar to Bin)
+typedef struct {
+    int64_t* elements;
+    int size;
+    int capacity;
+} LeafBuffer;
+
 
 // TBSort function implementation
 void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth) {
@@ -144,7 +151,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
     }
 
     // 2. TREE Step
-    clock_t tree_start_time, tree_end_time;
+    clock_t tree_start_time = (clock_t)0, tree_end_time = (clock_t)0;
     if (depth == 0 && timings != NULL) {
         tree_start_time = clock();
     }
@@ -185,141 +192,84 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
     }
     insertionSort(sampleTree, treeSize); // Sort the sampleTree
 
+    // Initialize LeafBuffers
+    LeafBuffer* leafBuffers = NULL;
+    int numLeafBuffers = treeSize + 1;
+    leafBuffers = (LeafBuffer*)malloc(numLeafBuffers * sizeof(LeafBuffer));
+    if (!leafBuffers) {
+        perror("Failed to allocate memory for leafBuffers");
+        free(sampleTree);
+        return; // Or handle error appropriately
+    }
+
+    for (int i = 0; i < numLeafBuffers; i++) {
+        leafBuffers[i].capacity = 4; // Initial capacity
+        leafBuffers[i].elements = (int64_t*)malloc(leafBuffers[i].capacity * sizeof(int64_t));
+        if (!leafBuffers[i].elements) {
+            perror("Failed to allocate memory for leafBuffer elements");
+            // Free previously allocated memory
+            for (int j = 0; j < i; j++) {
+                free(leafBuffers[j].elements);
+            }
+            free(leafBuffers);
+            free(sampleTree);
+            return; // Or handle error appropriately
+        }
+        leafBuffers[i].size = 0;
+    }
+
     if (depth == 0 && timings != NULL) {
         tree_end_time = clock();
         timings->tree_duration += ((double)(tree_end_time - tree_start_time)) / CLOCKS_PER_SEC;
     }
 
-    // 3. BIN Step
-    clock_t bin_start_time, bin_end_time;
+    // 3. BIN Step (Phase 1: Preparation/Buffering)
+    clock_t bin_start_time = (clock_t)0, bin_end_time = (clock_t)0;
     if (depth == 0 && timings != NULL) {
         bin_start_time = clock();
     }
 
-    int binCount;
-    double logVal = log2(numElements);
-    if (logVal <= 0 || numElements < 2) { // Avoid division by zero or log of <=1
-        binCount = treeSize + 2; // Default or minimum binCount
-    } else {
-        binCount = (int)(numElements / logVal);
-    }
+    // Old binning logic (previously commented out) has been removed.
+    // All related variables like binCount, logVal, bins, targetbin, slope, offset
+    // and their memory management code (allocations, calculations, freeing)
+    // have been deleted from this section and from the end of the function.
 
-    if (binCount < treeSize + 2) {
-        binCount = treeSize + 2;
-    }
-    if (binCount == 0) binCount = 1; // Ensure at least one bin
-
-
-    Bin* bins = (Bin*)calloc(binCount, sizeof(Bin)); // Use calloc to zero-initialize
-    if (!bins) {
-        perror("Failed to allocate memory for bins");
-        free(sampleTree);
-        return;
-    }
-
-    for (int i = 0; i < binCount; i++) {
-        bins[i].capacity = 4; // Initial capacity
-        bins[i].elements = (int64_t*)malloc(bins[i].capacity * sizeof(int64_t));
-        if (!bins[i].elements) {
-            perror("Failed to allocate memory for bin elements");
-            // Free previously allocated memory
-            for (int j = 0; j < i; j++) free(bins[j].elements);
-            free(bins);
-            free(sampleTree);
-            return;
-        }
-        bins[i].size = 0;
-    }
-
-    // Calculate targetbin, slope, and offset
-    int targetbinSize = treeSize + 2;
-    int* targetbin = (int*)malloc(targetbinSize * sizeof(int)); // targetbin stores indices, so int is fine
-    float* slope = (float*)malloc((targetbinSize -1) * sizeof(float)); // size treeSize + 1
-    float* offset = (float*)malloc((targetbinSize -1) * sizeof(float)); // size treeSize + 1
-
-    if (!targetbin || !slope || !offset) {
-         perror("Failed to allocate memory for targetbin/slope/offset");
-         for (int i = 0; i < binCount; i++) free(bins[i].elements);
-         free(bins);
-         free(sampleTree);
-         if(targetbin) free(targetbin);
-         if(slope) free(slope);
-         if(offset) free(offset);
-         return;
-    }
-
-    targetbin[0] = 0;
-    targetbin[targetbinSize - 1] = binCount -1; // Corrected to binCount - 1 as max index
-    for (int i = 1; i < targetbinSize - 1; i++) { // Iterates treeSize times
-        targetbin[i] = myclamp((int)roundf(numElements * (i) / (float)(treeSize +1) / logVal), 0, binCount -1);
-    }
-    // Ensure targetbin is sorted (it should be by construction, but good for robustness)
-    // insertionSort(targetbin, targetbinSize); // Not strictly necessary if calculation is correct
-
-    for (int i = 0; i < targetbinSize - 1; i++) { // Iterates treeSize + 1 times
-        float x1 = (i == 0) ? (float)sampleTree[0] -1 : (float)sampleTree[i-1]; //Approximate M_i-1
-        float x2 = (i == treeSize ) ? (float)sampleTree[treeSize-1] +1 : (float)sampleTree[i]; //Approximate M_i
-        // Handle x1 == x2 case to avoid division by zero
-        if (x1 >= x2) { // If x1 is not strictly less than x2, use a default slope/offset
-            slope[i] = 0; // Or some other sensible default
-            offset[i] = (float)targetbin[i];
-        } else {
-            slope[i] = (targetbin[i+1] - targetbin[i]) / (x2 - x1);
-            offset[i] = targetbin[i] - slope[i] * x1;
-        }
-    }
-
-
-    // Distribute elements from arr[l...r] into bins
+    // Phase 1: Distribute elements from arr[l...r] into leafBuffers
+    // Note: The erroneous code block that was here previously, related to
+    // `binCount`, `bins`, `targetbin`, `slope`, `offset` has been removed.
     for (int i = 0; i < numElements; i++) {
         int64_t element_val = arr[l + i];
-        int mypos = search(sampleTree, treeSize, element_val); // search returns index of element <= e
+        int mypos = search(sampleTree, treeSize, element_val);
+        int leafBufferIndex;
 
-        // Adjust mypos for slope/offset array indexing and logic
-        // if element_val is smaller than smallest in sampleTree, search returns -1
-        // if element_val is larger than largest in sampleTree, search returns treeSize-1
-        // The slope/offset arrays are indexed from 0 to treeSize.
-        // mypos from search: -1 to treeSize-1
-        // if mypos is -1 (element_val < sampleTree[0]), use slope[0], offset[0] -> maps to M_(-1) to M_0
-        // if mypos is k where sampleTree[k] <= element_val < sampleTree[k+1], use slope[k+1], offset[k+1] -> maps to M_k to M_{k+1}
-        // if mypos is treeSize-1 and element_val >= sampleTree[treeSize-1], use slope[treeSize], offset[treeSize] -> maps to M_{treeSize-1} to M_{treeSize}
-
-        int slope_offset_idx;
-        if (mypos == -1) { // element_val < sampleTree[0]
-            slope_offset_idx = 0;
-        } else if (mypos == treeSize - 1 && element_val >= sampleTree[treeSize - 1]) { // element_val >= largest element in sampleTree
-             // This means element_val falls in the last segment, defined by sampleTree[treeSize-1] and "infinity"
-            slope_offset_idx = treeSize; // Use the last slope/offset pair
+        if (mypos == -1) { // Element is smaller than sampleTree[0]
+            leafBufferIndex = 0;
+        } else if (mypos == treeSize - 1 && element_val >= sampleTree[treeSize - 1]) { // Element is larger than or equal to the largest sample
+            leafBufferIndex = treeSize;
         } else {
-            // sampleTree[mypos] <= element_val.
-            // If element_val < sampleTree[mypos+1], then it's in segment mypos to mypos+1. Use slope_offset_idx = mypos + 1.
-            // If element_val == sampleTree[mypos], it is also covered by mypos+1 (segment from sampleTree[mypos] to sampleTree[mypos+1])
-            // unless sampleTree[mypos] == sampleTree[mypos+1]. The search gives first index k where a[k]<=e.
-            slope_offset_idx = mypos + 1;
+            leafBufferIndex = mypos + 1;
         }
-        // slope and offset arrays have (treeSize+1) elements, indexed 0 to treeSize.
-        // So slope_offset_idx should be clamped to [0, treeSize].
-        // The above logic should result in slope_offset_idx in [0, treeSize].
-        // Example: treeSize = 2. sampleTree has T0, T1.
-        // slope/offset indices: 0, 1, 2.
-        // < T0: mypos = -1. idx = 0. (Correct: uses M-1 to M0)
-        // >= T1: mypos = 1. idx = 2. (Correct: uses M1 to M2 (infinity))
-        // T0 <= val < T1: mypos = 0. idx = 1. (Correct: uses M0 to M1)
 
-        int mybin_idx = myclamp((int)roundf(element_val * slope[slope_offset_idx] + offset[slope_offset_idx]), 0, binCount - 1);
+        LeafBuffer* currentLeafBuffer = &leafBuffers[leafBufferIndex];
 
-        // Add element_val to bins[mybin_idx]
-        if (bins[mybin_idx].size >= bins[mybin_idx].capacity) {
-            bins[mybin_idx].capacity = (bins[mybin_idx].capacity == 0) ? 1 : bins[mybin_idx].capacity * 2;
-            int64_t* new_elements = (int64_t*)realloc(bins[mybin_idx].elements, bins[mybin_idx].capacity * sizeof(int64_t));
+        if (currentLeafBuffer->size >= currentLeafBuffer->capacity) {
+            currentLeafBuffer->capacity = (currentLeafBuffer->capacity == 0) ? 1 : currentLeafBuffer->capacity * 2;
+            int64_t* new_elements = (int64_t*)realloc(currentLeafBuffer->elements, currentLeafBuffer->capacity * sizeof(int64_t));
             if (!new_elements) {
-                perror("Failed to reallocate memory for bin elements");
-                // Extensive cleanup needed here
-                return;
+                perror("Failed to reallocate memory for leafBuffer elements in Phase 1");
+                // Critical error: cleanup all allocated memory
+                for (int k = 0; k < numLeafBuffers; k++) { // Iterate up to numLeafBuffers
+                    if (leafBuffers[k].elements != NULL) { // Check individual elements
+                        free(leafBuffers[k].elements);
+                    }
+                }
+                free(leafBuffers); // Free the array of structs
+                free(sampleTree);
+                return; // Exit due to critical memory failure
             }
-            bins[mybin_idx].elements = new_elements;
+            currentLeafBuffer->elements = new_elements;
         }
-        bins[mybin_idx].elements[bins[mybin_idx].size++] = element_val;
+        currentLeafBuffer->elements[currentLeafBuffer->size++] = element_val;
     }
 
     if (depth == 0 && timings != NULL) {
@@ -327,56 +277,160 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
         timings->bin_duration += ((double)(bin_end_time - bin_start_time)) / CLOCKS_PER_SEC;
     }
 
-    // 4. SORT Step
-    clock_t sort_start_time, sort_end_time;
+    // Phase 2: Interpolation and Final Binning (replaces old SORT step)
+    clock_t sort_start_time = (clock_t)0, sort_end_time = (clock_t)0;
     if (depth == 0 && timings != NULL) {
         sort_start_time = clock();
     }
 
-    int binThreshold = (int)(5 * numElements / (float)binCount);
-    if (binCount == 0) binThreshold = numElements +1; // Avoid division by zero if binCount somehow is 0
-
     int curpos = l;
-    for (int i = 0; i < binCount; i++) {
-        if (bins[i].size == 0) {
-            free(bins[i].elements); // Free even if empty, as it was allocated
+    int smallBufferThreshold = 100; // Tunable threshold
+
+    for (int i = 0; i < numLeafBuffers; i++) {
+        LeafBuffer* currentLeafBuffer = &leafBuffers[i];
+
+        if (currentLeafBuffer->size == 0) {
             continue;
         }
 
-        if (bins[i].size < binThreshold) {
-            insertionSort(bins[i].elements, bins[i].size);
+        if (currentLeafBuffer->size < smallBufferThreshold) {
+            insertionSort(currentLeafBuffer->elements, currentLeafBuffer->size);
+            if (curpos + currentLeafBuffer->size > r + 1) { /* Error guard */ return; }
+            memcpy(&arr[curpos], currentLeafBuffer->elements, currentLeafBuffer->size * sizeof(int64_t));
+            curpos += currentLeafBuffer->size;
         } else {
-            TBSort_int64(bins[i].elements, 0, bins[i].size - 1, timings, depth + 1);
-        }
+            // Large Buffer Handling
+            int numElementsInLeaf = currentLeafBuffer->size;
+            int64_t* currentElements = currentLeafBuffer->elements;
 
-        if (curpos + bins[i].size > r + 1) {
-            // Error: trying to write past the allocated space for arr segment
-            // This indicates an issue with bin distribution or numElements calculation
-            fprintf(stderr, "Error: TBSort_int64 trying to write out of bounds.\n");
-            // Free remaining allocated memory
-            for (int k = i; k < binCount; k++) free(bins[k].elements);
-            free(bins);
-            free(sampleTree);
-            free(targetbin);
-            free(slope);
-            free(offset);
-            return; // Critical error
+            int sub_binCount;
+            double logValLeaf = log2(numElementsInLeaf);
+            if (logValLeaf <= 0 || numElementsInLeaf < 2) {
+                sub_binCount = 2;
+            } else {
+                sub_binCount = (int)(numElementsInLeaf / logValLeaf);
+            }
+            if (sub_binCount < 2) sub_binCount = 2;
+            if (sub_binCount > numElementsInLeaf) sub_binCount = numElementsInLeaf;
+
+            Bin* localBins = (Bin*)calloc(sub_binCount, sizeof(Bin));
+            if (!localBins) {
+                perror("Failed to allocate memory for localBins");
+                // Comprehensive cleanup
+                for (int k_lb = 0; k_lb < numLeafBuffers; k_lb++) if (leafBuffers[k_lb].elements) free(leafBuffers[k_lb].elements);
+                free(leafBuffers);
+                free(sampleTree);
+                return;
+            }
+
+            for (int j = 0; j < sub_binCount; j++) {
+                localBins[j].capacity = 4; // Initial capacity for local bins
+                localBins[j].elements = (int64_t*)malloc(localBins[j].capacity * sizeof(int64_t));
+                if (!localBins[j].elements) {
+                    perror("Failed to allocate memory for localBin elements");
+                    for (int k_lbe = 0; k_lbe < j; k_lbe++) free(localBins[k_lbe].elements);
+                    free(localBins);
+                    for (int k_lb = 0; k_lb < numLeafBuffers; k_lb++) if (leafBuffers[k_lb].elements) free(leafBuffers[k_lb].elements);
+                    free(leafBuffers);
+                    free(sampleTree);
+                    return;
+                }
+                localBins[j].size = 0;
+            }
+
+            // Interpolation (Option A: min/max of currentElements)
+            int64_t min_val_leaf = currentElements[0];
+            int64_t max_val_leaf = currentElements[0];
+            for (int k = 1; k < numElementsInLeaf; k++) {
+                if (currentElements[k] < min_val_leaf) min_val_leaf = currentElements[k];
+                if (currentElements[k] > max_val_leaf) max_val_leaf = currentElements[k];
+            }
+
+            float slope_leaf = 0;
+            float offset_leaf = 0; // Or (float)min_val_leaf;
+
+            if (min_val_leaf >= max_val_leaf) { // All elements are the same or only one element
+                // All elements will go to the first bin or distribute evenly if preferred.
+                // For simplicity, they'll all go to bin 0 with slope 0.
+                slope_leaf = 0;
+                offset_leaf = 0; // All map to bin 0
+            } else {
+                slope_leaf = (sub_binCount - 1.0f) / (max_val_leaf - min_val_leaf);
+                offset_leaf = -slope_leaf * min_val_leaf;
+            }
+
+            // Distribute currentElements into localBins
+            for (int k = 0; k < numElementsInLeaf; k++) {
+                int64_t elem = currentElements[k];
+                int local_bin_idx;
+                if (min_val_leaf >= max_val_leaf) { // Handle case where all elements are same
+                    local_bin_idx = 0;
+                } else {
+                    local_bin_idx = myclamp((int)roundf(elem * slope_leaf + offset_leaf), 0, sub_binCount - 1);
+                }
+
+                Bin* currentLocalBin = &localBins[local_bin_idx];
+                if (currentLocalBin->size >= currentLocalBin->capacity) {
+                    currentLocalBin->capacity = (currentLocalBin->capacity == 0) ? 1 : currentLocalBin->capacity * 2;
+                    int64_t* new_elements_local = (int64_t*)realloc(currentLocalBin->elements, currentLocalBin->capacity * sizeof(int64_t));
+                    if (!new_elements_local) {
+                        perror("Failed to reallocate for localBin elements");
+                        // Comprehensive cleanup
+                        for(int lbi=0; lbi < sub_binCount; ++lbi) if(localBins[lbi].elements) free(localBins[lbi].elements);
+                        free(localBins);
+                        for (int k_lb = 0; k_lb < numLeafBuffers; k_lb++) if (leafBuffers[k_lb].elements) free(leafBuffers[k_lb].elements);
+                        free(leafBuffers);
+                        free(sampleTree);
+                        return;
+                    }
+                    currentLocalBin->elements = new_elements_local;
+                }
+                currentLocalBin->elements[currentLocalBin->size++] = elem;
+            }
+
+            // Sort localBins and copy to arr
+            // int localBinThreshold = (int)(5 * numElementsInLeaf / (float)sub_binCount);
+            // Using a fixed small threshold for simplicity, or same as smallBufferThreshold
+            int localBinThreshold = smallBufferThreshold;
+
+
+            for (int j = 0; j < sub_binCount; j++) {
+                if (localBins[j].size == 0) {
+                    free(localBins[j].elements);
+                    continue;
+                }
+                if (localBins[j].size < localBinThreshold) {
+                    insertionSort(localBins[j].elements, localBins[j].size);
+                } else {
+                    TBSort_int64(localBins[j].elements, 0, localBins[j].size - 1, timings, depth + 1);
+                }
+                if (curpos + localBins[j].size > r + 1) { /* Error guard */ return; }
+                memcpy(&arr[curpos], localBins[j].elements, localBins[j].size * sizeof(int64_t));
+                curpos += localBins[j].size;
+                free(localBins[j].elements);
+            }
+            free(localBins);
         }
-        memcpy(&arr[curpos], bins[i].elements, bins[i].size * sizeof(int64_t));
-        curpos += bins[i].size;
-        free(bins[i].elements);
     }
 
     if (depth == 0 && timings != NULL) {
         sort_end_time = clock();
-        timings->sort_duration += ((double)(sort_end_time - sort_start_time)) / CLOCKS_PER_SEC;
+        timings->sort_duration = ((double)(sort_end_time - sort_start_time)) / CLOCKS_PER_SEC;
     }
 
-    free(bins);
+    // Final cleanup of leafBuffers
+    if (leafBuffers != NULL) {
+        for (int i = 0; i < numLeafBuffers; i++) {
+            if (leafBuffers[i].elements != NULL) {
+                free(leafBuffers[i].elements);
+            }
+        }
+        free(leafBuffers);
+        leafBuffers = NULL; // Good practice
+    }
+
+    // Old frees for bins, targetbin, slope, offset are removed from here.
     free(sampleTree);
-    free(targetbin);
-    free(slope);
-    free(offset);
 }
 
 // Main function removed as per requirement

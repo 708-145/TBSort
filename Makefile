@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g -std=c99 # -O2 can be added for optimization if desired for benchmarks
+CFLAGS = -Wall -g -std=c99 -O2
 LDFLAGS = -lm # For linking math library used in tbsort_int64.c
 
 TARGET = tbsort_bench
