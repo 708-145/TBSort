@@ -67,7 +67,7 @@ Benchmarking for N = 30000000 elements:
 -------------------------------------------------------------
 
 Benchmarking for N = 100000000 elements:
-  TBSort_int64 time: 26.489404 seconds (Tree: 0.000018, Bin: 13.731792, Sort: 12.706838)
+  TBSort_int64 time: 11.438519 seconds (Tree: 0.000018, Bin: 2.894194, Sort: 8.459671)
   qsort time:        21.124247 seconds
 -------------------------------------------------------------
 
