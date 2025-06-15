@@ -114,7 +114,7 @@ def compile_and_benchmark(compilation_cmd, benchmark_cmd_template, benchmark_n):
 
         output_lines = benchmark_result.stdout.splitlines()
         time_taken = float('inf')
-        pattern = re.compile(rf"N={benchmark_n}.*TBSort_int64 time:\s*([0-9]+\.[0-9]+)\s*seconds")
+        pattern = re.compile(r"TBSort_int64 time:\s*([0-9]+\.[0-9]+)\s*seconds")
         for line in output_lines:
             match = pattern.search(line)
             if match:
