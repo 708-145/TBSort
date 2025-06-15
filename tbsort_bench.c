@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <string.h> // For memcpy, strcmp
 #include <limits.h> // For ULLONG_MAX (though not directly used, good for context of strtoull)
-#include "tbsort_int64.h"
+#include "tbsort_int64.h" // C version of TBSort
+#include "tbsort_cpp_wrapper.h" // C++ version of TBSort (via wrapper)
 
 // Comparison function for qsort with int64_t
 int compare_int64_t(const void* a, const void* b) {
@@ -85,8 +86,8 @@ int main(int argc, char *argv[]) {
 
     srand(time(NULL));
 
-    printf("Starting benchmark comparisons between TBSort_int64 and qsort.\n");
-    printf("=============================================================\n");
+    printf("Starting benchmark comparisons between TBSort_int64 (C), TBSort_cpp_int64 (C++), and qsort.\n");
+    printf("===========================================================================================\n");
 
     for (int i = 0; i < num_sizes_to_run; i++) {
         size_t current_size = sizes_to_run_ptr[i];
@@ -132,9 +133,28 @@ int main(int argc, char *argv[]) {
         double qsort_duration = ((double)(qsort_end_time - qsort_start_time)) / CLOCKS_PER_SEC;
         printf("  qsort time:        %f seconds\n", qsort_duration);
 
-        free(arr_orig);
+        // Free arrays used by C TBSort and qsort
         free(arr_tbsort);
         free(arr_qsort);
+
+        // C++ TBSort
+        int64_t* arr_tbsort_cpp = (int64_t*)malloc(current_size * sizeof(int64_t));
+        if (!arr_tbsort_cpp) {
+            perror("Failed to allocate memory for arr_tbsort_cpp");
+            free(arr_orig); // arr_orig is the only one remaining from the common set
+            continue;
+        }
+        copy_int64_array(arr_orig, arr_tbsort_cpp, current_size); // arr_orig is still valid here
+
+        clock_t tbs_cpp_start_time = clock();
+        TBSort_cpp_int64(arr_tbsort_cpp, 0, current_size - 1);
+        clock_t tbs_cpp_end_time = clock();
+        double tbsort_cpp_duration = ((double)(tbs_cpp_end_time - tbs_cpp_start_time)) / CLOCKS_PER_SEC;
+        printf("  TBSort_cpp_int64 time: %f seconds\n", tbsort_cpp_duration);
+        free(arr_tbsort_cpp);
+
+        // Now free the original array for this iteration
+        free(arr_orig);
 
         printf("-------------------------------------------------------------\n");
     }
