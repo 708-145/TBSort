@@ -12,7 +12,7 @@ BENCH_FILE_PATH = "tbsort_bench.c"  # Needed for compilation command
 EXECUTABLE_NAME = "tbsort_bench_executable"
 COMPILATION_COMMAND = ["gcc", "-Wall", "-Wextra", "-O2", C_FILE_PATH, BENCH_FILE_PATH, "-o", EXECUTABLE_NAME, "-lm"]
 BENCHMARK_EXEC_COMMAND = [f"./{EXECUTABLE_NAME}"]
-NUM_ITERATIONS = 100  # Configurable
+NUM_ITERATIONS = 2  # Configurable
 BENCHMARK_ARRAY_SIZE_N = 1000000  # Used to parse the correct line from benchmark output
 
 PARAMETERS_TO_TUNE = {
