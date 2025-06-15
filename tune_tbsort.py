@@ -16,13 +16,12 @@ BENCHMARK_EXEC_COMMAND_TEMPLATE = [f"./{EXECUTABLE_NAME}"] # Renamed to indicate
 # Updated NUM_ITERATIONS to 2
 NUM_ITERATIONS = 100
 # Updated BENCHMARK_ARRAY_SIZE_N to 1000000
-BENCHMARK_ARRAY_SIZE_N = 1000000
+BENCHMARK_ARRAY_SIZE_N = 10000
+
 
 PARAMETERS_TO_TUNE = {
-    "INSERTION_SORT_THRESHOLD": {"min": 40, "max": 70, "type": int},
-    "LEAF_BUFFER_INITIAL_CAPACITY": {"values": [32, 48, 64, 96, 128], "type": "choice"},
-    "SMALL_LEAF_BUFFER_THRESHOLD": {"min": 16, "max": 80, "type": int},
-    "LOCAL_BIN_INITIAL_CAPACITY": {"values": [8, 12, 16, 24, 32, 48, 64], "type": "choice"},
+    "INSERTION_SORT_THRESHOLD": {"min": 128, "max": 128, "type": int},
+    "SMALL_LEAF_BUFFER_THRESHOLD": {"values": [64, 80, 96, 112, 128], "type": "choice"},
 }
 
 # --- File Handling & Cleanup ---

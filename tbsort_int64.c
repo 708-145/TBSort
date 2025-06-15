@@ -27,11 +27,11 @@
 #include "tbsort_int64.h" // For TBSortTimings struct
 
 // Tunable parameters
-#define INSERTION_SORT_THRESHOLD 64
+#define INSERTION_SORT_THRESHOLD 128
 #define LEAF_BUFFER_INITIAL_CAPACITY 32
 #define LEAF_BUFFER_GROWTH_FACTOR 2
-#define SMALL_LEAF_BUFFER_THRESHOLD 48
-#define LOCAL_BIN_INITIAL_CAPACITY 24
+#define SMALL_LEAF_BUFFER_THRESHOLD 96
+#define LOCAL_BIN_INITIAL_CAPACITY 32
 #define LOCAL_BIN_GROWTH_FACTOR 2
 
 // Function to swap two elements
