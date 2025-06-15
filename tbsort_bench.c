@@ -1,8 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h> // For strtoull, exit, EXIT_FAILURE
 #include <time.h>
 #include <stdint.h>
-#include <string.h> // For memcpy
+#include <string.h> // For memcpy, strcmp
+#include <limits.h> // For ULLONG_MAX (though not directly used, good for context of strtoull)
 #include "tbsort_int64.h"
 
 // Comparison function for qsort with int64_t
@@ -22,18 +23,11 @@ int64_t* generate_random_int64_array(size_t n) {
         exit(EXIT_FAILURE);
     }
     for (size_t i = 0; i < n; i++) {
-        // RAND_MAX is often 2^31-1 or 2^15-1. To get full int64_t range:
-        // Combine multiple calls to rand().
-        // This creates a pseudo-random 64-bit number.
         uint64_t val = 0;
-        val |= (uint64_t)rand();
-        val <<= 15; // Shift by 15 bits if RAND_MAX is around 2^15
-        val |= (uint64_t)rand();
-        val <<= 15;
-        val |= (uint64_t)rand();
-        val <<= 15;
-        val |= (uint64_t)rand();
-        val <<= 15; // ensure last bits also from rand()
+        val |= (uint64_t)rand(); val <<= 15;
+        val |= (uint64_t)rand(); val <<= 15;
+        val |= (uint64_t)rand(); val <<= 15;
+        val |= (uint64_t)rand(); val <<= 15;
         val |= (uint64_t)rand();
         arr[i] = (int64_t)val;
     }
@@ -41,7 +35,6 @@ int64_t* generate_random_int64_array(size_t n) {
 }
 
 // Function to copy an int64_t array
-// (memcpy can be used directly, but this is a clear helper)
 void copy_int64_array(const int64_t* src, int64_t* dst, size_t n) {
     if (src == NULL || dst == NULL) {
         fprintf(stderr, "Error: Null pointer passed to copy_int64_array.\n");
@@ -50,24 +43,58 @@ void copy_int64_array(const int64_t* src, int64_t* dst, size_t n) {
     memcpy(dst, src, n * sizeof(int64_t));
 }
 
-int main() {
-    size_t sizes[] = {30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000, 1000000, 3000000, 10000000, 30000000, 100000000};
-    int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
+int main(int argc, char *argv[]) {
+    static size_t default_sizes[] = {30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000, 1000000, 3000000, 10000000, 30000000, 100000000};
+    size_t single_n_from_arg_array[1]; // For holding the N if provided via arg
 
-    srand(time(NULL)); // Seed random number generator
+    size_t* sizes_to_run_ptr;
+    int num_sizes_to_run;
+
+    if (argc == 1) {
+        // No arguments, use default sizes
+        sizes_to_run_ptr = default_sizes;
+        num_sizes_to_run = sizeof(default_sizes) / sizeof(default_sizes[0]);
+    } else if (argc == 2) {
+        char *endptr;
+        unsigned long long n_ull = strtoull(argv[1], &endptr, 10);
+
+        if (endptr == argv[1] || *endptr != '\0') {
+            fprintf(stderr, "Error: Invalid character in N value '%s'. N must be a positive integer.\n", argv[1]);
+            return EXIT_FAILURE;
+        }
+        // Note: strtoull returns 0 for "0" and ULLONG_MAX for overflow.
+        // We want N > 0. SIZE_MAX is a good upper bound from stddef.h (implicitly via stdlib.h).
+        if (n_ull == 0) { // Catches "0" and non-numeric strings that parse as 0 before endptr check.
+            fprintf(stderr, "Error: Invalid N value '%s'. N must be a positive integer > 0.\n", argv[1]);
+            return EXIT_FAILURE;
+        }
+        if (n_ull > SIZE_MAX) { // Check if it exceeds what size_t can hold
+             fprintf(stderr, "Error: N value %llu is too large (must be <= %zu).\n", n_ull, SIZE_MAX);
+             return EXIT_FAILURE;
+        }
+
+        single_n_from_arg_array[0] = (size_t)n_ull;
+        sizes_to_run_ptr = single_n_from_arg_array;
+        num_sizes_to_run = 1;
+    } else {
+        fprintf(stderr, "Usage: %s [N]\n", argv[0]);
+        fprintf(stderr, "  N (optional): A specific array size to benchmark.\n");
+        fprintf(stderr, "  If N is not provided, a default set of array sizes will be benchmarked.\n");
+        return EXIT_FAILURE;
+    }
+
+    srand(time(NULL));
 
     printf("Starting benchmark comparisons between TBSort_int64 and qsort.\n");
     printf("=============================================================\n");
 
-    for (int i = 0; i < num_sizes; i++) {
-        size_t current_size = sizes[i];
+    for (int i = 0; i < num_sizes_to_run; i++) {
+        size_t current_size = sizes_to_run_ptr[i];
         printf("\nBenchmarking for N = %zu elements:\n", current_size);
 
-        // Generate original random array
         int64_t* arr_orig = generate_random_int64_array(current_size);
-        if (!arr_orig) continue; // Should be handled by exit in generate_random_int64_array
+        if (!arr_orig) continue;
 
-        // Create copies for each sort
         int64_t* arr_tbsort = (int64_t*)malloc(current_size * sizeof(int64_t));
         if (!arr_tbsort) {
             perror("Failed to allocate memory for arr_tbsort");
@@ -85,24 +112,26 @@ int main() {
         }
         copy_int64_array(arr_orig, arr_qsort, current_size);
 
-        // Benchmark TBSort_int64
-        TBSortTimings tbs_timings; // Declare the struct
-        clock_t start_time = clock();
-        // Call with pointer to struct and depth 0
-        TBSort_int64(arr_tbsort, 0, current_size - 1, &tbs_timings, 0);
-        clock_t end_time = clock();
-        double tbsort_duration = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-        // Print using struct members
-        printf("  TBSort_int64 time: %f seconds (Tree: %f, Bin: %f, Sort: %f)\n", tbsort_duration, tbs_timings.tree_duration, tbs_timings.bin_duration, tbs_timings.sort_duration);
+        TBSortTimings tbs_timings;
+        tbs_timings.tree_duration = 0.0;
+        tbs_timings.bin_duration = 0.0;
+        tbs_timings.sort_duration = 0.0;
 
-        // Benchmark qsort
-        start_time = clock();
+        clock_t tbs_start_time = clock();
+        TBSort_int64(arr_tbsort, 0, current_size - 1, &tbs_timings, 0);
+        clock_t tbs_end_time = clock();
+        double tbsort_duration = ((double)(tbs_end_time - tbs_start_time)) / CLOCKS_PER_SEC;
+
+        printf("  TBSort_int64 time: %f seconds (Tree: %f, Bin: %f, Sort: %f)\n",
+               tbsort_duration, tbs_timings.tree_duration,
+               tbs_timings.bin_duration, tbs_timings.sort_duration);
+
+        clock_t qsort_start_time = clock();
         qsort(arr_qsort, current_size, sizeof(int64_t), compare_int64_t);
-        end_time = clock();
-        double qsort_duration = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+        clock_t qsort_end_time = clock();
+        double qsort_duration = ((double)(qsort_end_time - qsort_start_time)) / CLOCKS_PER_SEC;
         printf("  qsort time:        %f seconds\n", qsort_duration);
 
-        // Free allocated memory
         free(arr_orig);
         free(arr_tbsort);
         free(arr_qsort);

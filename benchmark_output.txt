@@ -2,73 +2,73 @@ Starting benchmark comparisons between TBSort_int64 and qsort.
 =============================================================
 
 Benchmarking for N = 30 elements:
-  TBSort_int64 time: 0.000017 seconds (Tree: 0.000012, Bin: 0.000002, Sort: 0.000001)
+  TBSort_int64 time: 0.000002 seconds (Tree: 0.000000, Bin: 0.000000, Sort: 0.000000)
   qsort time:        0.000004 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 100 elements:
-  TBSort_int64 time: 0.000013 seconds (Tree: 0.000002, Bin: 0.000006, Sort: 0.000003)
-  qsort time:        0.000009 seconds
+  TBSort_int64 time: 0.000004 seconds (Tree: 0.000000, Bin: 0.000000, Sort: 0.000000)
+  qsort time:        0.000011 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 300 elements:
-  TBSort_int64 time: 0.000025 seconds (Tree: 0.000002, Bin: 0.000014, Sort: 0.000007)
-  qsort time:        0.000031 seconds
+  TBSort_int64 time: 0.000035 seconds (Tree: 0.000014, Bin: 0.000008, Sort: 0.000011)
+  qsort time:        0.000041 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 1000 elements:
-  TBSort_int64 time: 0.000108 seconds (Tree: 0.000001, Bin: 0.000034, Sort: 0.000068)
-  qsort time:        0.000116 seconds
+  TBSort_int64 time: 0.000068 seconds (Tree: 0.000001, Bin: 0.000028, Sort: 0.000037)
+  qsort time:        0.000133 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 3000 elements:
-  TBSort_int64 time: 0.000254 seconds (Tree: 0.000003, Bin: 0.000115, Sort: 0.000132)
-  qsort time:        0.000461 seconds
+  TBSort_int64 time: 0.000207 seconds (Tree: 0.000002, Bin: 0.000093, Sort: 0.000110)
+  qsort time:        0.000405 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 10000 elements:
-  TBSort_int64 time: 0.000910 seconds (Tree: 0.000006, Bin: 0.000504, Sort: 0.000394)
-  qsort time:        0.001011 seconds
+  TBSort_int64 time: 0.000529 seconds (Tree: 0.000002, Bin: 0.000224, Sort: 0.000298)
+  qsort time:        0.001124 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 30000 elements:
-  TBSort_int64 time: 0.001921 seconds (Tree: 0.000007, Bin: 0.000601, Sort: 0.001303)
-  qsort time:        0.006265 seconds
+  TBSort_int64 time: 0.001659 seconds (Tree: 0.000004, Bin: 0.000597, Sort: 0.001054)
+  qsort time:        0.005649 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 100000 elements:
-  TBSort_int64 time: 0.007118 seconds (Tree: 0.000007, Bin: 0.002418, Sort: 0.004606)
-  qsort time:        0.011846 seconds
+  TBSort_int64 time: 0.006066 seconds (Tree: 0.000008, Bin: 0.002504, Sort: 0.003526)
+  qsort time:        0.016766 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 300000 elements:
-  TBSort_int64 time: 0.029582 seconds (Tree: 0.000016, Bin: 0.014247, Sort: 0.015263)
-  qsort time:        0.042919 seconds
+  TBSort_int64 time: 0.017199 seconds (Tree: 0.000010, Bin: 0.006089, Sort: 0.011041)
+  qsort time:        0.061969 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 1000000 elements:
-  TBSort_int64 time: 0.082357 seconds (Tree: 0.000011, Bin: 0.031649, Sort: 0.049802)
-  qsort time:        0.136117 seconds
+  TBSort_int64 time: 0.055707 seconds (Tree: 0.000010, Bin: 0.020710, Sort: 0.034730)
+  qsort time:        0.179084 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 3000000 elements:
-  TBSort_int64 time: 0.262344 seconds (Tree: 0.000011, Bin: 0.084444, Sort: 0.176393)
-  qsort time:        0.469165 seconds
+  TBSort_int64 time: 0.227929 seconds (Tree: 0.000010, Bin: 0.078135, Sort: 0.149771)
+  qsort time:        0.622344 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 10000000 elements:
-  TBSort_int64 time: 1.010719 seconds (Tree: 0.000015, Bin: 0.298900, Sort: 0.708082)
-  qsort time:        1.503083 seconds
+  TBSort_int64 time: 0.842406 seconds (Tree: 0.000016, Bin: 0.327354, Sort: 0.514411)
+  qsort time:        2.401624 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 30000000 elements:
-  TBSort_int64 time: 3.598384 seconds (Tree: 0.000041, Bin: 1.168192, Sort: 2.424228)
-  qsort time:        5.414058 seconds
+  TBSort_int64 time: 3.054991 seconds (Tree: 0.000016, Bin: 0.999059, Sort: 2.052539)
+  qsort time:        8.309168 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 100000000 elements:
-  TBSort_int64 time: 11.438519 seconds (Tree: 0.000018, Bin: 2.894194, Sort: 8.459671)
-  qsort time:        21.124247 seconds
+  TBSort_int64 time: 12.727182 seconds (Tree: 0.000017, Bin: 3.355466, Sort: 9.354141)
+  qsort time:        29.855146 seconds
 -------------------------------------------------------------
 
 Benchmark finished.
