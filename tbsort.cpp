@@ -92,7 +92,7 @@ void TBSort(int64_t arr[],
 		int64_t sampleTree[treeSize];
 		for (int i = 0; i < treeSize; i++) sampleTree[i] = arr[ l + (rand() % (r - l + 1)) ]; // TODO: sample unique values
 		std::sort(sampleTree, sampleTree+treeSize);
-		printf("Search Tree: "); printArray(sampleTree, treeSize);
+		//printf("Search Tree: "); printArray(sampleTree, treeSize);
 
 		// Phase 1: Distribute elements from arr[l...r] into leafBuffers
 		int numLeafBuffers = treeSize + 1;
