@@ -8,21 +8,21 @@ import atexit
 # --- Configuration Variables ---
 C_FILE_PATH = "tbsort_int64.c"
 ORIGINAL_C_FILE_BACKUP_PATH = "tbsort_int64.c.original"
-BENCH_FILE_PATH = "tbsort_bench.c"  # Needed for compilation command
+BENCH_FILE_PATH = "tbsort_bench.c"
 EXECUTABLE_NAME = "tbsort_bench_executable"
-COMPILATION_COMMAND = ["gcc", "-Wall", "-Wextra", "-O2", C_FILE_PATH, BENCH_FILE_PATH, "-o", EXECUTABLE_NAME, "-lm"]
-BENCHMARK_EXEC_COMMAND = [f"./{EXECUTABLE_NAME}"]
-NUM_ITERATIONS = 2  # Configurable
-BENCHMARK_ARRAY_SIZE_N = 1000000  # Used to parse the correct line from benchmark output
+# Updated COMPILATION_COMMAND to use -O0
+COMPILATION_COMMAND = ["gcc", "-Wall", "-Wextra", "-O0", C_FILE_PATH, BENCH_FILE_PATH, "-o", EXECUTABLE_NAME, "-lm"]
+BENCHMARK_EXEC_COMMAND_TEMPLATE = [f"./{EXECUTABLE_NAME}"] # Renamed to indicate it's a template
+# Updated NUM_ITERATIONS to 2
+NUM_ITERATIONS = 2
+# Updated BENCHMARK_ARRAY_SIZE_N to 1000000
+BENCHMARK_ARRAY_SIZE_N = 1000000
 
 PARAMETERS_TO_TUNE = {
     "INSERTION_SORT_THRESHOLD": {"min": 2, "max": 64, "type": int},
     "LEAF_BUFFER_INITIAL_CAPACITY": {"values": [2, 4, 8, 16, 32, 64], "type": "choice"},
     "SMALL_LEAF_BUFFER_THRESHOLD": {"min": 16, "max": 512, "type": int},
     "LOCAL_BIN_INITIAL_CAPACITY": {"values": [2, 4, 8, 16, 32, 64], "type": "choice"},
-    # Growth factors are defined in C but not tuned by default by this script.
-    # "LEAF_BUFFER_GROWTH_FACTOR": {"values": [2, 3, 4], "type": "choice"},
-    # "LOCAL_BIN_GROWTH_FACTOR": {"values": [2, 3, 4], "type": "choice"},
 }
 
 # --- File Handling & Cleanup ---
@@ -59,7 +59,6 @@ def restore_original_c_file():
         except Exception as e:
             print(f"Error restoring C file from memory: {e}")
 
-
 atexit.register(restore_original_c_file)
 
 # --- Core Functions ---
@@ -78,16 +77,12 @@ def update_c_file(c_file_path, params):
     try:
         with open(c_file_path, 'r') as f:
             content = f.read()
-
         for param_name, param_value in params.items():
-            # Regex to find "#define PARAM_NAME VALUE" and replace VALUE
-            # It handles potential multiple spaces and existing numbers
             pattern = re.compile(rf"(#define\s+{param_name}\s+)\d+")
             replacement = rf"\g<1>{param_value}"
             content, num_subs = pattern.subn(replacement, content)
             if num_subs == 0:
                 print(f"Warning: Parameter '{param_name}' not found or not updated in C file.")
-
         with open(c_file_path, 'w') as f:
             f.write(content)
         return True
@@ -95,28 +90,31 @@ def update_c_file(c_file_path, params):
         print(f"Error updating C file '{c_file_path}': {e}")
         return False
 
-def compile_and_benchmark(compilation_cmd, benchmark_cmd, benchmark_n):
+# Modified compile_and_benchmark function
+def compile_and_benchmark(compilation_cmd, benchmark_cmd_template, benchmark_n):
     try:
-        # Compile
         compile_result = subprocess.run(compilation_cmd, capture_output=True, text=True, check=False)
         if compile_result.returncode != 0:
             print(f"Compilation failed with error:\n{compile_result.stderr}")
             return float('inf')
 
-        # Benchmark
-        benchmark_result = subprocess.run(benchmark_cmd, capture_output=True, text=True, check=False)
+        # Construct actual benchmark command
+        actual_benchmark_cmd = list(benchmark_cmd_template) + [str(benchmark_n)]
+        # print(f"Executing benchmark: {' '.join(actual_benchmark_cmd)}") # For debugging
+
+        benchmark_result = subprocess.run(actual_benchmark_cmd, capture_output=True, text=True, check=False)
         if benchmark_result.returncode != 0:
-            print(f"Benchmark execution failed with error:\n{benchmark_result.stderr}")
+            # Check if it's a known error from tbsort_bench.c for invalid N
+            if "Error: Invalid N value" in benchmark_result.stderr or \
+               "Error: N value" in benchmark_result.stderr:
+                 print(f"Benchmark executable reported an error for N={benchmark_n}:\n{benchmark_result.stderr}")
+            else:
+                print(f"Benchmark execution failed with error (cmd: {' '.join(actual_benchmark_cmd)}):\n{benchmark_result.stderr}")
             return float('inf')
 
-        # Parse output
         output_lines = benchmark_result.stdout.splitlines()
         time_taken = float('inf')
-        # Example line: "N=1000000, TBSort_int64 time: 0.123456 seconds (Tree: ..., Bin: ..., Sort: ...)"
-        # More robust regex:
-        # Looks for "N=...", then specifically the target N, then "TBSort_int64 time: X.XXXXXX seconds"
         pattern = re.compile(rf"N={benchmark_n}.*TBSort_int64 time:\s*([0-9]+\.[0-9]+)\s*seconds")
-
         for line in output_lines:
             match = pattern.search(line)
             if match:
@@ -124,31 +122,31 @@ def compile_and_benchmark(compilation_cmd, benchmark_cmd, benchmark_n):
                 break
 
         if time_taken == float('inf'):
-            print(f"Failed to parse benchmark time for N={benchmark_n} from output:\n{benchmark_result.stdout}")
+            print(f"Failed to parse benchmark time for N={benchmark_n} from output (cmd: {' '.join(actual_benchmark_cmd)}):\n{benchmark_result.stdout}")
 
         return time_taken
-
     except Exception as e:
         print(f"Error during compilation or benchmark: {e}")
         return float('inf')
 
 # --- Main Loop ---
 def main():
-    backup_original_c_file() # Also loads original_c_content
+    backup_original_c_file()
 
     best_params = None
     best_time = float('inf')
 
-    print(f"Starting random search for {NUM_ITERATIONS} iterations...\n")
+    print(f"Starting random search for {NUM_ITERATIONS} iterations, N={BENCHMARK_ARRAY_SIZE_N}...\n")
 
     for i in range(NUM_ITERATIONS):
         current_params = generate_random_params(PARAMETERS_TO_TUNE)
 
         if not update_c_file(C_FILE_PATH, current_params):
             print(f"Iteration {i+1}/{NUM_ITERATIONS}: Failed to update C file. Skipping.")
-            continue # Skip this iteration if C file update failed
+            continue
 
-        current_time = compile_and_benchmark(COMPILATION_COMMAND, BENCHMARK_EXEC_COMMAND, BENCHMARK_ARRAY_SIZE_N)
+        # Pass BENCHMARK_EXEC_COMMAND_TEMPLATE to compile_and_benchmark
+        current_time = compile_and_benchmark(COMPILATION_COMMAND, BENCHMARK_EXEC_COMMAND_TEMPLATE, BENCHMARK_ARRAY_SIZE_N)
 
         print(f"Iteration {i+1}/{NUM_ITERATIONS}:")
         print(f"  Params: {current_params}")
@@ -165,11 +163,8 @@ def main():
     if best_params:
         print(f"Best parameters found: {best_params}")
         print(f"Best time: {best_time:.6f} seconds")
-        # Optionally, restore the C file to the best parameters found
-        # print("Restoring C file to best parameters found...")
-        # update_c_file(C_FILE_PATH, best_params)
     else:
-        print("No successful runs completed.")
+        print("No successful runs completed or all runs resulted in errors/infinite time.")
 
 if __name__ == "__main__":
     main()
