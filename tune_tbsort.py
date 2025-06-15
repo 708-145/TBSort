@@ -11,18 +11,18 @@ ORIGINAL_C_FILE_BACKUP_PATH = "tbsort_int64.c.original"
 BENCH_FILE_PATH = "tbsort_bench.c"
 EXECUTABLE_NAME = "tbsort_bench_executable"
 # Updated COMPILATION_COMMAND to use -O0
-COMPILATION_COMMAND = ["gcc", "-Wall", "-Wextra", "-O0", C_FILE_PATH, BENCH_FILE_PATH, "-o", EXECUTABLE_NAME, "-lm"]
+COMPILATION_COMMAND = ["gcc", "-Wall", "-Wextra", "-O2", C_FILE_PATH, BENCH_FILE_PATH, "-o", EXECUTABLE_NAME, "-lm"]
 BENCHMARK_EXEC_COMMAND_TEMPLATE = [f"./{EXECUTABLE_NAME}"] # Renamed to indicate it's a template
 # Updated NUM_ITERATIONS to 2
-NUM_ITERATIONS = 2
+NUM_ITERATIONS = 100
 # Updated BENCHMARK_ARRAY_SIZE_N to 1000000
 BENCHMARK_ARRAY_SIZE_N = 1000000
 
 PARAMETERS_TO_TUNE = {
-    "INSERTION_SORT_THRESHOLD": {"min": 2, "max": 64, "type": int},
-    "LEAF_BUFFER_INITIAL_CAPACITY": {"values": [2, 4, 8, 16, 32, 64], "type": "choice"},
-    "SMALL_LEAF_BUFFER_THRESHOLD": {"min": 16, "max": 512, "type": int},
-    "LOCAL_BIN_INITIAL_CAPACITY": {"values": [2, 4, 8, 16, 32, 64], "type": "choice"},
+    "INSERTION_SORT_THRESHOLD": {"min": 40, "max": 70, "type": int},
+    "LEAF_BUFFER_INITIAL_CAPACITY": {"values": [32, 48, 64, 96, 128], "type": "choice"},
+    "SMALL_LEAF_BUFFER_THRESHOLD": {"min": 16, "max": 80, "type": int},
+    "LOCAL_BIN_INITIAL_CAPACITY": {"values": [8, 12, 16, 24, 32, 48, 64], "type": "choice"},
 }
 
 # --- File Handling & Cleanup ---
