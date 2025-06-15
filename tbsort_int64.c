@@ -26,6 +26,14 @@
 #include <stdint.h> // For int64_t
 #include "tbsort_int64.h" // For TBSortTimings struct
 
+// Tunable parameters
+#define INSERTION_SORT_THRESHOLD 4
+#define LEAF_BUFFER_INITIAL_CAPACITY 4
+#define LEAF_BUFFER_GROWTH_FACTOR 2
+#define SMALL_LEAF_BUFFER_THRESHOLD 100
+#define LOCAL_BIN_INITIAL_CAPACITY 4
+#define LOCAL_BIN_GROWTH_FACTOR 2
+
 // Function to swap two elements
 void swap(int64_t* xp, int64_t* yp) {
     int64_t temp = *xp;
@@ -134,7 +142,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
     int numElements = r - l + 1;
 
     // Handle very small arrays with insertion sort directly for stability
-    if (numElements < 4) { // Threshold for direct sort
+    if (numElements < INSERTION_SORT_THRESHOLD) { // Threshold for direct sort
         if (numElements > 1) { // insertionSort handles n<=1
              // Need to copy to a temp array or adjust insertionSort to work on a sub-array
             int64_t* subArray = (int64_t*)malloc(numElements * sizeof(int64_t));
@@ -203,7 +211,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
     }
 
     for (int i = 0; i < numLeafBuffers; i++) {
-        leafBuffers[i].capacity = 4; // Initial capacity
+        leafBuffers[i].capacity = LEAF_BUFFER_INITIAL_CAPACITY; // Initial capacity
         leafBuffers[i].elements = (int64_t*)malloc(leafBuffers[i].capacity * sizeof(int64_t));
         if (!leafBuffers[i].elements) {
             perror("Failed to allocate memory for leafBuffer elements");
@@ -253,7 +261,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
         LeafBuffer* currentLeafBuffer = &leafBuffers[leafBufferIndex];
 
         if (currentLeafBuffer->size >= currentLeafBuffer->capacity) {
-            currentLeafBuffer->capacity = (currentLeafBuffer->capacity == 0) ? 1 : currentLeafBuffer->capacity * 2;
+            currentLeafBuffer->capacity = (currentLeafBuffer->capacity == 0) ? 1 : currentLeafBuffer->capacity * LEAF_BUFFER_GROWTH_FACTOR;
             int64_t* new_elements = (int64_t*)realloc(currentLeafBuffer->elements, currentLeafBuffer->capacity * sizeof(int64_t));
             if (!new_elements) {
                 perror("Failed to reallocate memory for leafBuffer elements in Phase 1");
@@ -284,7 +292,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
     }
 
     int curpos = l;
-    int smallBufferThreshold = 100; // Tunable threshold
+    int smallBufferThreshold = SMALL_LEAF_BUFFER_THRESHOLD; // Tunable threshold
 
     for (int i = 0; i < numLeafBuffers; i++) {
         LeafBuffer* currentLeafBuffer = &leafBuffers[i];
@@ -324,7 +332,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
             }
 
             for (int j = 0; j < sub_binCount; j++) {
-                localBins[j].capacity = 4; // Initial capacity for local bins
+                localBins[j].capacity = LOCAL_BIN_INITIAL_CAPACITY; // Initial capacity for local bins
                 localBins[j].elements = (int64_t*)malloc(localBins[j].capacity * sizeof(int64_t));
                 if (!localBins[j].elements) {
                     perror("Failed to allocate memory for localBin elements");
@@ -371,7 +379,7 @@ void TBSort_int64(int64_t arr[], int l, int r, TBSortTimings* timings, int depth
 
                 Bin* currentLocalBin = &localBins[local_bin_idx];
                 if (currentLocalBin->size >= currentLocalBin->capacity) {
-                    currentLocalBin->capacity = (currentLocalBin->capacity == 0) ? 1 : currentLocalBin->capacity * 2;
+                    currentLocalBin->capacity = (currentLocalBin->capacity == 0) ? 1 : currentLocalBin->capacity * LOCAL_BIN_GROWTH_FACTOR;
                     int64_t* new_elements_local = (int64_t*)realloc(currentLocalBin->elements, currentLocalBin->capacity * sizeof(int64_t));
                     if (!new_elements_local) {
                         perror("Failed to reallocate for localBin elements");
