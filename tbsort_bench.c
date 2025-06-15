@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 
     srand(time(NULL));
 
-    printf("Starting benchmark comparisons between TBSort_int64 (C), TBSort_cpp_int64 (C++), and qsort.\n");
+    printf("Starting benchmark comparisons between TBSort_int64 (C), TBSort_cpp_int64 (C++), qsort, std::sort (C++), and std::stable_sort (C++).\n");
     printf("===========================================================================================\n");
 
     for (int i = 0; i < num_sizes_to_run; i++) {
@@ -112,6 +112,27 @@ int main(int argc, char *argv[]) {
             continue;
         }
         copy_int64_array(arr_orig, arr_qsort, current_size);
+
+        int64_t* arr_std_sort = (int64_t*)malloc(current_size * sizeof(int64_t));
+        if (!arr_std_sort) {
+            perror("Failed to allocate memory for arr_std_sort");
+            free(arr_orig);
+            free(arr_tbsort);
+            free(arr_qsort);
+            continue;
+        }
+        copy_int64_array(arr_orig, arr_std_sort, current_size);
+
+        int64_t* arr_std_stable_sort = (int64_t*)malloc(current_size * sizeof(int64_t));
+        if (!arr_std_stable_sort) {
+            perror("Failed to allocate memory for arr_std_stable_sort");
+            free(arr_orig);
+            free(arr_tbsort);
+            free(arr_qsort);
+            free(arr_std_sort);
+            continue;
+        }
+        copy_int64_array(arr_orig, arr_std_stable_sort, current_size);
 
         TBSortTimings tbs_timings;
         tbs_timings.tree_duration = 0.0;
@@ -152,6 +173,22 @@ int main(int argc, char *argv[]) {
         double tbsort_cpp_duration = ((double)(tbs_cpp_end_time - tbs_cpp_start_time)) / CLOCKS_PER_SEC;
         printf("  TBSort_cpp_int64 time: %f seconds\n", tbsort_cpp_duration);
         free(arr_tbsort_cpp);
+
+        // std::sort
+        clock_t std_sort_start_time = clock();
+        StdSort_cpp_int64(arr_std_sort, current_size);
+        clock_t std_sort_end_time = clock();
+        double std_sort_duration = ((double)(std_sort_end_time - std_sort_start_time)) / CLOCKS_PER_SEC;
+        printf("  std::sort time:    %f seconds\n", std_sort_duration);
+        free(arr_std_sort);
+
+        // std::stable_sort
+        clock_t std_stable_sort_start_time = clock();
+        StdStableSort_cpp_int64(arr_std_stable_sort, current_size);
+        clock_t std_stable_sort_end_time = clock();
+        double std_stable_sort_duration = ((double)(std_stable_sort_end_time - std_stable_sort_start_time)) / CLOCKS_PER_SEC;
+        printf("  std::stable_sort time: %f seconds\n", std_stable_sort_duration);
+        free(arr_std_stable_sort);
 
         // Now free the original array for this iteration
         free(arr_orig);
