@@ -1,88 +1,116 @@
-Starting benchmark comparisons between TBSort_int64 (C), TBSort_cpp_int64 (C++), and qsort.
+Starting benchmark comparisons between TBSort_int64 (C), TBSort_cpp_int64 (C++), qsort, std::sort (C++), and std::stable_sort (C++).
 ===========================================================================================
 
 Benchmarking for N = 30 elements:
   TBSort_int64 time: 0.000002 seconds (Tree: 0.000000, Bin: 0.000000, Sort: 0.000000)
-  qsort time:        0.000004 seconds
-  TBSort_cpp_int64 time: 0.000008 seconds
+  qsort time:        0.000003 seconds
+  TBSort_cpp_int64 time: 0.000011 seconds
+  std::sort time:    0.000001 seconds
+  std::stable_sort time: 0.000002 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 100 elements:
-  TBSort_int64 time: 0.000005 seconds (Tree: 0.000000, Bin: 0.000000, Sort: 0.000000)
-  qsort time:        0.000010 seconds
-  TBSort_cpp_int64 time: 0.000010 seconds
+  TBSort_int64 time: 0.000002 seconds (Tree: 0.000000, Bin: 0.000000, Sort: 0.000000)
+  qsort time:        0.000006 seconds
+  TBSort_cpp_int64 time: 0.000004 seconds
+  std::sort time:    0.000004 seconds
+  std::stable_sort time: 0.000004 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 300 elements:
-  TBSort_int64 time: 0.000044 seconds (Tree: 0.000020, Bin: 0.000013, Sort: 0.000009)
-  qsort time:        0.000038 seconds
-  TBSort_cpp_int64 time: 0.000035 seconds
+  TBSort_int64 time: 0.000035 seconds (Tree: 0.000012, Bin: 0.000009, Sort: 0.000012)
+  qsort time:        0.000029 seconds
+  TBSort_cpp_int64 time: 0.000022 seconds
+  std::sort time:    0.000011 seconds
+  std::stable_sort time: 0.000013 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 1000 elements:
-  TBSort_int64 time: 0.000096 seconds (Tree: 0.000001, Bin: 0.000032, Sort: 0.000061)
-  qsort time:        0.000102 seconds
-  TBSort_cpp_int64 time: 0.000089 seconds
+  TBSort_int64 time: 0.000054 seconds (Tree: 0.000001, Bin: 0.000021, Sort: 0.000030)
+  qsort time:        0.000068 seconds
+  TBSort_cpp_int64 time: 0.000082 seconds
+  std::sort time:    0.000062 seconds
+  std::stable_sort time: 0.000062 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 3000 elements:
-  TBSort_int64 time: 0.000220 seconds (Tree: 0.000003, Bin: 0.000094, Sort: 0.000121)
-  qsort time:        0.000312 seconds
-  TBSort_cpp_int64 time: 0.000274 seconds
+  TBSort_int64 time: 0.000232 seconds (Tree: 0.000003, Bin: 0.000095, Sort: 0.000132)
+  qsort time:        0.000288 seconds
+  TBSort_cpp_int64 time: 0.000283 seconds
+  std::sort time:    0.000178 seconds
+  std::stable_sort time: 0.000175 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 10000 elements:
-  TBSort_int64 time: 0.000761 seconds (Tree: 0.000005, Bin: 0.000368, Sort: 0.000382)
-  qsort time:        0.000889 seconds
-  TBSort_cpp_int64 time: 0.000615 seconds
+  TBSort_int64 time: 0.000558 seconds (Tree: 0.000003, Bin: 0.000222, Sort: 0.000327)
+  qsort time:        0.000898 seconds
+  TBSort_cpp_int64 time: 0.000678 seconds
+  std::sort time:    0.000565 seconds
+  std::stable_sort time: 0.000671 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 30000 elements:
-  TBSort_int64 time: 0.001472 seconds (Tree: 0.000003, Bin: 0.000618, Sort: 0.000837)
-  qsort time:        0.002715 seconds
-  TBSort_cpp_int64 time: 0.001929 seconds
+  TBSort_int64 time: 0.002056 seconds (Tree: 0.000007, Bin: 0.000796, Sort: 0.001245)
+  qsort time:        0.003936 seconds
+  TBSort_cpp_int64 time: 0.002220 seconds
+  std::sort time:    0.001825 seconds
+  std::stable_sort time: 0.002132 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 100000 elements:
-  TBSort_int64 time: 0.005547 seconds (Tree: 0.000009, Bin: 0.002131, Sort: 0.003372)
-  qsort time:        0.010341 seconds
-  TBSort_cpp_int64 time: 0.006809 seconds
+  TBSort_int64 time: 0.006845 seconds (Tree: 0.000014, Bin: 0.002336, Sort: 0.004444)
+  qsort time:        0.011546 seconds
+  TBSort_cpp_int64 time: 0.007236 seconds
+  std::sort time:    0.007068 seconds
+  std::stable_sort time: 0.009514 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 300000 elements:
-  TBSort_int64 time: 0.017082 seconds (Tree: 0.000011, Bin: 0.006408, Sort: 0.010592)
-  qsort time:        0.033098 seconds
-  TBSort_cpp_int64 time: 0.019699 seconds
+  TBSort_int64 time: 0.020932 seconds (Tree: 0.000016, Bin: 0.007115, Sort: 0.013725)
+  qsort time:        0.043577 seconds
+  TBSort_cpp_int64 time: 0.025141 seconds
+  std::sort time:    0.020638 seconds
+  std::stable_sort time: 0.029181 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 1000000 elements:
-  TBSort_int64 time: 0.056107 seconds (Tree: 0.000012, Bin: 0.022136, Sort: 0.033946)
-  qsort time:        0.113326 seconds
-  TBSort_cpp_int64 time: 0.097054 seconds
+  TBSort_int64 time: 0.078479 seconds (Tree: 0.000013, Bin: 0.024988, Sort: 0.053463)
+  qsort time:        0.124228 seconds
+  TBSort_cpp_int64 time: 0.069693 seconds
+  std::sort time:    0.067856 seconds
+  std::stable_sort time: 0.111934 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 3000000 elements:
-  TBSort_int64 time: 0.220405 seconds (Tree: 0.000012, Bin: 0.076279, Sort: 0.143962)
-  qsort time:        0.407994 seconds
-  TBSort_cpp_int64 time: 0.272448 seconds
+  TBSort_int64 time: 0.211549 seconds (Tree: 0.000014, Bin: 0.075474, Sort: 0.135491)
+  qsort time:        0.394818 seconds
+  TBSort_cpp_int64 time: 0.285471 seconds
+  std::sort time:    0.240683 seconds
+  std::stable_sort time: 0.264399 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 10000000 elements:
-  TBSort_int64 time: 0.904846 seconds (Tree: 0.000019, Bin: 0.293008, Sort: 0.609988)
-  qsort time:        1.507556 seconds
-  TBSort_cpp_int64 time: 1.059276 seconds
+  TBSort_int64 time: 0.854779 seconds (Tree: 0.000018, Bin: 0.351919, Sort: 0.502025)
+  qsort time:        1.660807 seconds
+  TBSort_cpp_int64 time: 1.004827 seconds
+  std::sort time:    0.824436 seconds
+  std::stable_sort time: 1.175562 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 30000000 elements:
-  TBSort_int64 time: 3.118357 seconds (Tree: 0.000018, Bin: 1.067328, Sort: 2.048628)
-  qsort time:        5.530655 seconds
-  TBSort_cpp_int64 time: 3.727323 seconds
+  TBSort_int64 time: 3.232087 seconds (Tree: 0.000016, Bin: 0.958672, Sort: 2.270378)
+  qsort time:        5.202603 seconds
+  TBSort_cpp_int64 time: 3.747282 seconds
+  std::sort time:    2.813446 seconds
+  std::stable_sort time: 3.523435 seconds
 -------------------------------------------------------------
 
 Benchmarking for N = 100000000 elements:
-  TBSort_int64 time: 13.405939 seconds (Tree: 0.000020, Bin: 3.323359, Sort: 10.062259)
-  qsort time:        18.317908 seconds
-  TBSort_cpp_int64 time: 17.088225 seconds
+  TBSort_int64 time: 13.911732 seconds (Tree: 0.000047, Bin: 3.255551, Sort: 10.646558)
+  qsort time:        19.627440 seconds
+  TBSort_cpp_int64 time: 15.872717 seconds
+  std::sort time:    11.311596 seconds
+  std::stable_sort time: 13.569439 seconds
 -------------------------------------------------------------
 
 Benchmark finished.
